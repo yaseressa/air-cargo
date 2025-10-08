@@ -3,6 +3,7 @@ import { axiosAuthClient, axiosApiClient } from "../clients";
 import {
   AuthResponse,
   Cargo,
+  CargoExpense,
   CargoResponseType,
   CargoTypeSummaryReport,
   CargoTracking,
@@ -218,6 +219,20 @@ export const useCargoPhotos = (id: string) => {
     enabled: !!id,
     onError: (error) => {
       console.error("Error fetching cargo photos:", error);
+    },
+  });
+};
+
+const fetchCargoExpenses = async (id: string): Promise<CargoExpense[]> => {
+  const { data } = await axiosApiClient.get(`/cargos/${id}/expenses`);
+  return data;
+};
+
+export const useCargoExpenses = (id?: string) => {
+  return useQuery<CargoExpense[]>(["cargoExpenses", id], () => fetchCargoExpenses(id!), {
+    enabled: !!id,
+    onError: (error) => {
+      console.error("Error fetching cargo expenses:", error);
     },
   });
 };

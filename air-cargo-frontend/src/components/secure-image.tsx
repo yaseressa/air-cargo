@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { buildFileUrl } from "@/utils";
 
 const SecureImage = ({
   fileURL,
@@ -11,7 +12,7 @@ const SecureImage = ({
 }) => {
   return (
     <img
-      src={import.meta.env.VITE_BACKEND_API_URL + "/api" + fileURL}
+      src={buildFileUrl(fileURL)}
       alt={fileName}
       className={cn("object-cover w-full h-full", className)}
     />

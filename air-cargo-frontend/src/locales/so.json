@@ -21,6 +21,19 @@
   "totalVehicleTypes": "Wadarta Noocyada Gaadiidka",
   "totalExpenses": "Wadarta Kharashaadka",
   "expenses": "Kharashaadka",
+  "expensesSectionTitle": "Kharashaadka",
+  "expensesSectionSubtitle": "La soco kharashaadka xamuulkan oo lifaaq caddeymo.",
+  "addExpense": "Ku dar Kharash",
+  "expenseDescription": "Sharaxaad",
+  "expenseAmount": "Lacag",
+  "expenseDate": "Taariikh",
+  "expenseCurrency": "Lacagta",
+  "expenseReceipt": "Rasiid",
+  "expenseCreated": "Kharashka si guul leh ayaa loo daray",
+  "expenseCreationFailed": "Kharashka laguma darin",
+  "noExpenses": "Kharash looma diiwaangelin xamuulkan weli.",
+  "viewReceipt": "Eeg rasiidka",
+  "saving": "Kaydin...",
   "bar": "Baar",
   "pie": "Saxan wareeg ah",
   "month": "Bishii",
@@ -535,7 +548,8 @@
     "noDriverFound": "Darawal lama helin"
   },
   "validation": {
-    "required": "Goobtan waa lama huraan."
+    "required": "Goobtan waa lama huraan.",
+    "positiveNumber": "Qiimuhu waa inuu ka weyn yahay eber."
   },
   "uploadPhoto": "Soo Gali Sawir",
   "uploadReceipt": "Soo gali sawirka rasiidka",

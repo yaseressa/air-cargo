@@ -2,6 +2,7 @@ import {
   AuthRequest,
   AuthResponse,
   Cargo,
+  CargoExpense,
   CargoTracking,
   changePasswordRequest,
   Customer,
@@ -111,6 +112,41 @@ const cargoPhotos = async ({
     photo
   );
   return data;
+};
+
+type CargoExpensePayload = {
+  description?: string;
+  amount: number;
+  currencyCode: string;
+  incurredAt?: string | null;
+};
+
+const createCargoExpense = async ({
+  cargoId,
+  data,
+  file,
+}: {
+  cargoId: string;
+  data: CargoExpensePayload;
+  file?: globalThis.File;
+}): Promise<CargoExpense> => {
+  const formData = new FormData();
+
+  formData.append(
+    "expense",
+    new Blob([JSON.stringify(data)], { type: "application/json" })
+  );
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  const { data: response } = await axiosApiClient.post<CargoExpense>(
+    `/cargos/${cargoId}/expenses`,
+    formData
+  );
+
+  return response;
 };
 
 const deleteFileType = async (FileTypeId: string): Promise<string> => {
@@ -607,6 +643,14 @@ export const useLogin = (): UseMutationResult<
 
 export const useAddPhotos = (): UseMutationResult<FileType, Error, any> => {
   return useMutation(cargoPhotos);
+};
+
+export const useCreateCargoExpense = (): UseMutationResult<
+  CargoExpense,
+  Error,
+  { cargoId: string; data: CargoExpensePayload; file?: globalThis.File }
+> => {
+  return useMutation(createCargoExpense);
 };
 
 export const useDeleteFile = (): UseMutationResult<string, Error, string> => {
