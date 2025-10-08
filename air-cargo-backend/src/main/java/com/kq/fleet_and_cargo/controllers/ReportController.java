@@ -1,5 +1,7 @@
 package com.kq.fleet_and_cargo.controllers;
 
+import com.kq.fleet_and_cargo.payload.response.CargoTypeSummaryResponse;
+import com.kq.fleet_and_cargo.payload.response.PickupCityRevenueResponse;
 import com.kq.fleet_and_cargo.services.ReportService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -7,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -45,5 +49,34 @@ public record ReportController(ReportService reportService) {
                 .header("Content-Disposition", "attachment; filename=PickupCityRevenue.xlsx")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(reportService.generatePickupCityRevenueReport(startDate, endDate));
+    }
+
+    @GetMapping("/cargos/pickup-city-revenue/preview")
+    public ResponseEntity<List<PickupCityRevenueResponse>> getPickupCityRevenuePreview(
+            @RequestParam(value = "search", defaultValue = "", required = false) String search,
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate
+    ) {
+        return ResponseEntity.ok(reportService.getPickupCityRevenuePreview(search, startDate, endDate));
+    }
+
+    @GetMapping("/cargos/type-distribution")
+    public ResponseEntity<byte[]> getCargoTypeDistribution(
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate
+    ) throws Exception {
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=CargoTypeDistribution.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(reportService.generateCargoTypeDistributionReport(startDate, endDate));
+    }
+
+    @GetMapping("/cargos/type-distribution/preview")
+    public ResponseEntity<List<CargoTypeSummaryResponse>> getCargoTypeDistributionPreview(
+            @RequestParam(value = "search", defaultValue = "", required = false) String search,
+            @RequestParam(value = "startDate", required = false) String startDate,
+            @RequestParam(value = "endDate", required = false) String endDate
+    ) {
+        return ResponseEntity.ok(reportService.getCargoTypeDistributionPreview(search, startDate, endDate));
     }
 }

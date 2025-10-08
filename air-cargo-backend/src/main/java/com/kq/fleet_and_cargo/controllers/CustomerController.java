@@ -1,5 +1,6 @@
 package com.kq.fleet_and_cargo.controllers;
 
+import com.kq.fleet_and_cargo.models.Cargo;
 import com.kq.fleet_and_cargo.models.Customer;
 import com.kq.fleet_and_cargo.payload.request.CustomerUpdateRequest;
 import com.kq.fleet_and_cargo.payload.response.CustomerNoCargoResponse;
@@ -19,6 +20,26 @@ public record CustomerController(CustomerService customerService) {
     @GetMapping("/{id}")
     public ResponseEntity<Customer> getCustomer(@PathVariable String id) {
         return ResponseEntity.ok(customerService.findById(id));
+    }
+
+    @GetMapping("/{id}/sent-cargos")
+    public ResponseEntity<Page<Cargo>> getCustomerSentCargos(@PathVariable String id,
+                                                             @RequestParam int page,
+                                                             @RequestParam int size,
+                                                             @RequestParam(required = false, defaultValue = "") String search,
+                                                             @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+                                                             @RequestParam(required = false, defaultValue = "desc") String order) {
+        return ResponseEntity.ok(customerService.findSentCargoByCustomer(id, search, page, size, sortBy, order));
+    }
+
+    @GetMapping("/{id}/received-cargos")
+    public ResponseEntity<Page<Cargo>> getCustomerReceivedCargos(@PathVariable String id,
+                                                                 @RequestParam int page,
+                                                                 @RequestParam int size,
+                                                                 @RequestParam(required = false, defaultValue = "") String search,
+                                                                 @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+                                                                 @RequestParam(required = false, defaultValue = "desc") String order) {
+        return ResponseEntity.ok(customerService.findReceivedCargoByCustomer(id, search, page, size, sortBy, order));
     }
    @GetMapping("/phone/{phone}")
     public ResponseEntity<Customer> getCustomerByPhone(@PathVariable("phone") String phone) {
