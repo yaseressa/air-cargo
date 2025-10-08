@@ -92,9 +92,11 @@ public interface CargoRepository extends JpaRepository<Cargo, String> {
                         "LOWER(c.id) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.receiver.firstName) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.receiver.lastName) LIKE LOWER(concat('%', :search, '%')) OR " +
-                        "LOWER(concat(c.receiver.firstName, ' ', c.receiver.lastName)) LIKE LOWER(concat('%', :search, '%')) OR " +
+                        "LOWER(concat(c.receiver.firstName, ' ', c.receiver.lastName)) LIKE LOWER(concat('%', :search, '%')) OR "
+                        +
                         "LOWER(c.destination) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.pickupLocation) LIKE LOWER(concat('%', :search, '%')) OR " +
+                        "LOWER(c.receiver.phoneNumber) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.cargoType) LIKE LOWER(concat('%', :search, '%'))" +
                         ")")
         Page<Cargo> findAllSentByCustomer(@Param("customerId") String customerId,
@@ -107,9 +109,11 @@ public interface CargoRepository extends JpaRepository<Cargo, String> {
                         "LOWER(c.id) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.sender.firstName) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.sender.lastName) LIKE LOWER(concat('%', :search, '%')) OR " +
-                        "LOWER(concat(c.sender.firstName, ' ', c.sender.lastName)) LIKE LOWER(concat('%', :search, '%')) OR " +
+                        "LOWER(concat(c.sender.firstName, ' ', c.sender.lastName)) LIKE LOWER(concat('%', :search, '%')) OR "
+                        +
                         "LOWER(c.destination) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.pickupLocation) LIKE LOWER(concat('%', :search, '%')) OR " +
+                        "LOWER(c.sender.phoneNumber) LIKE LOWER(concat('%', :search, '%')) OR " +
                         "LOWER(c.cargoType) LIKE LOWER(concat('%', :search, '%'))" +
                         ")")
         Page<Cargo> findAllReceivedByCustomer(@Param("customerId") String customerId,

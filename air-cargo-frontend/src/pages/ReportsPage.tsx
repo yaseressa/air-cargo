@@ -26,12 +26,16 @@ const ReportsPage = () => {
     <>
       <Header />
       <main className="flex flex-col justify-start items-stretch gap-4 m-2 p-4 sm:px-6 sm:py-0 md:gap-14 my-2">
-        <Tabs defaultValue="customers" className="w-full">
-          <TabsList className="grid md:w-[600px] grid-cols-2 md:grid-cols-4">
+        <Tabs defaultValue="customers" className="w-full ">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 md:my-4 md:py-0 py-2 h-fit">
             <TabsTrigger value="customers">{t("customers")}</TabsTrigger>
             <TabsTrigger value="cargos">{t("cargo")}</TabsTrigger>
-            <TabsTrigger value="pickupRevenue">{t("pickupRevenue")}</TabsTrigger>
-            <TabsTrigger value="cargoTypes">{t("cargoTypeDistribution")}</TabsTrigger>
+            <TabsTrigger value="pickupRevenue">
+              {t("pickupRevenue")}
+            </TabsTrigger>
+            <TabsTrigger value="cargoTypes">
+              {t("cargoTypeDistribution")}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="customers">
             <CustomersReportTab />
@@ -286,7 +290,10 @@ const CargosReportTab = () => {
         header: t("sender"),
         accessorKey: "sender",
         cell: ({ row }) => (
-          <Link to={`/customers/${row.original.sender?.id}`} className="text-primary">
+          <Link
+            to={`/customers/${row.original.sender?.id}`}
+            className="text-primary"
+          >
             {row.original.sender?.firstName} {row.original.sender?.lastName}
           </Link>
         ),
@@ -295,7 +302,10 @@ const CargosReportTab = () => {
         header: t("receiver"),
         accessorKey: "receiver",
         cell: ({ row }) => (
-          <Link to={`/customers/${row.original.receiver?.id}`} className="text-primary">
+          <Link
+            to={`/customers/${row.original.receiver?.id}`}
+            className="text-primary"
+          >
             {row.original.receiver?.firstName} {row.original.receiver?.lastName}
           </Link>
         ),

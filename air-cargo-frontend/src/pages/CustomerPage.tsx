@@ -118,14 +118,20 @@ export default () => {
       customerStore.setCustomer(customerData);
       setLoading(false);
     }
-  }, [customerLoading, customerData, customerStore]);
+  }, [customerLoading, customerData]);
 
   useEffect(() => {
     clearSentCargo();
     clearReceivedCargo();
     resetSentPageNo();
     resetReceivedPageNo();
-  }, [id, clearSentCargo, clearReceivedCargo, resetSentPageNo, resetReceivedPageNo]);
+  }, [
+    id,
+    clearSentCargo,
+    clearReceivedCargo,
+    resetSentPageNo,
+    resetReceivedPageNo,
+  ]);
 
   useEffect(() => {
     if (sentCargoPage) {
@@ -133,19 +139,12 @@ export default () => {
       setSentTotalElements(sentCargoPage.totalElements ?? 0);
       setSentTotalPages(sentCargoPage.totalPages ?? 0);
     }
-  }, [
-    sentCargoPage,
-    putSentCargo,
-    setSentTotalElements,
-    setSentTotalPages,
-  ]);
+  }, [sentCargoPage, putSentCargo, setSentTotalElements, setSentTotalPages]);
 
   useEffect(() => {
     if (receivedCargoPage) {
       putReceivedCargo(receivedCargoPage);
-      setReceivedTotalElements(
-        receivedCargoPage.totalElements ?? 0
-      );
+      setReceivedTotalElements(receivedCargoPage.totalElements ?? 0);
       setReceivedTotalPages(receivedCargoPage.totalPages ?? 0);
     }
   }, [
@@ -214,7 +213,8 @@ export default () => {
         cell: ({ row }) => (
           <Button variant="link">
             <Link to={`/customers/${row.original.receiver?.id}`}>
-              {row.original.receiver?.firstName} {row.original.receiver?.lastName}
+              {row.original.receiver?.firstName}{" "}
+              {row.original.receiver?.lastName}
             </Link>
           </Button>
         ),
@@ -274,7 +274,9 @@ export default () => {
             <Button
               variant="ghost"
               onClick={() =>
-                navigate(`/cargo/${customerStore.customer?.id}/${row.original.id}`)
+                navigate(
+                  `/cargo/${customerStore.customer?.id}/${row.original.id}`
+                )
               }
             >
               <SquarePen size={16} className="text-primary" />
@@ -318,7 +320,16 @@ export default () => {
         ),
       },
     ] as ColumnDef[]);
-  }, [t, setSentColumns, setSentSortBy, toggleSentOrder, sentSortBy, sentOrder, navigate, customerStore.customer?.id]);
+  }, [
+    t,
+    setSentColumns,
+    setSentSortBy,
+    toggleSentOrder,
+    sentSortBy,
+    sentOrder,
+    navigate,
+    customerStore.customer?.id,
+  ]);
 
   useEffect(() => {
     setReceivedColumns([
@@ -422,7 +433,15 @@ export default () => {
         ),
       },
     ] as ColumnDef[]);
-  }, [t, setReceivedColumns, setReceivedSortBy, toggleReceivedOrder, receivedSortBy, receivedOrder, navigate]);
+  }, [
+    t,
+    setReceivedColumns,
+    setReceivedSortBy,
+    toggleReceivedOrder,
+    receivedSortBy,
+    receivedOrder,
+    navigate,
+  ]);
 
   const customerDetailsColumns: ColumnDef[] = [
     {
@@ -525,7 +544,7 @@ export default () => {
                 <p>
                   {t("confirmDeleteCustomer1")}
                   <code className="bg-muted rounded-md p-1">
-                    {customerStore.customer?.firstName} {" "}
+                    {customerStore.customer?.firstName}{" "}
                     {customerStore.customer?.lastName}
                   </code>
                   ?
