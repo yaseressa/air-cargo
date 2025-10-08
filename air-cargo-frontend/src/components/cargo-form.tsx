@@ -1,5 +1,6 @@
 import {
   useGlobalLoadingStore,
+  useLoggedUserStore,
   useReceiverStore,
   useSelectedCargoStore,
   useSenderStore,
@@ -20,7 +21,11 @@ import {
 import { FloatingLabelInput } from "./re/input";
 import { Button } from "./ui/button";
 import Loader from "./loader";
-import { useCustomerByPhone, useLocations } from "@/services/calls/queries";
+import {
+  useCustomerByPhone,
+  useLocations,
+  useSupportedCurrencies,
+} from "@/services/calls/queries";
 import { Skeleton } from "./ui/skeleton";
 import { Item, SelectWrapper } from "./re/select";
 import { Location } from "@/utils/types";
@@ -36,6 +41,8 @@ export const CargoForm = () => {
   const { t } = useTranslation();
   const [receiverPhone, setReceiverPhone] = useState("");
   const { data: locations, isLoading: isLocationLoading } = useLocations();
+  const { data: supportedCurrencies, isLoading: isCurrencyLoading } =
+    useSupportedCurrencies();
   const {
     data: customerData,
     isLoading: isCustomerLoading,
@@ -47,6 +54,7 @@ export const CargoForm = () => {
   const sender = useSenderStore();
   const cargo = useSelectedCargoStore();
   const toggle = useToggleCreateStore();
+  const loggedUser = useLoggedUserStore();
   const navigate = useNavigate();
   const globalLoading = useGlobalLoadingStore();
 
@@ -72,6 +80,7 @@ export const CargoForm = () => {
     destination: z.string(),
     description: z.string().optional(),
     price: z.coerce.number(),
+    currencyCode: z.string().min(1, t("validation.required")),
   });
 
   useEffect(() => {
@@ -117,8 +126,18 @@ export const CargoForm = () => {
       receiverLastName: cargo.cargo?.receiver?.lastName,
       receiverPhone: cargo.cargo?.receiver?.phoneNumber,
       price: cargo.cargo?.price?.amount,
+      currencyCode:
+        cargo.cargo?.price?.currencyCode ||
+        loggedUser.user.preferredCurrencyCode ||
+        supportedCurrencies?.[0] ||
+        "",
     });
-  }, [cargo.cargo, sender.customer]);
+  }, [
+    cargo.cargo,
+    sender.customer,
+    loggedUser.user.preferredCurrencyCode,
+    supportedCurrencies,
+  ]);
 
   useEffect(() => {
     if (!receiver.customer) return;
@@ -152,6 +171,7 @@ export const CargoForm = () => {
           },
           price: {
             amount: data.price,
+            currencyCode: data.currencyCode,
           },
         },
         {
@@ -188,6 +208,7 @@ export const CargoForm = () => {
           id: cargo.cargo?.id!,
           price: {
             amount: data.price,
+            currencyCode: data.currencyCode,
           },
         },
         {
@@ -398,25 +419,48 @@ export const CargoForm = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <FloatingLabelInput
-                          label={
-                            t("price") + " " + cargo.cargo?.price?.currencyCode
+                <div className="md:col-span-2 grid md:grid-cols-[2fr,1fr] md:gap-6 gap-2">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <FloatingLabelInput
+                            label={t("price")}
+                            className="p-2 h-10"
+                            type="number"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="currencyCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("expenseCurrency")}</FormLabel>
+                        <SelectWrapper
+                          isForm
+                          data={
+                            (supportedCurrencies || []).map((currency) => ({
+                              label: currency,
+                              value: currency,
+                            })) as Item[]
                           }
-                          className="p-2 h-10"
-                          type="number"
-                          {...field}
+                          readonly={isCurrencyLoading}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder={t("expenseCurrency")}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="weight"

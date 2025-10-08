@@ -24,6 +24,15 @@ export interface Cargo {
   price?: Money;
   referenceNumber?: number;
 }
+
+export interface CargoExpense {
+  id?: string;
+  description?: string;
+  amount?: Money;
+  incurredAt?: string;
+  receipt?: File;
+  createdAt?: string;
+}
 export type FXRate = {
   id?: string;
   sourceCurrency?: string;

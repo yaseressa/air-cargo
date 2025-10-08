@@ -1,4 +1,5 @@
 import { useAddPhotos } from "@/services/calls/mutators";
+import { buildFileUrl } from "@/utils";
 import {
   useGlobalLoadingStore,
   useModalNumber,
@@ -24,9 +25,7 @@ export const UploadFile = ({
   const { t } = useTranslation();
   const [file, setFile] = useState<any>();
   const [fileUrl, setFileUrl] = useState<string>(
-    originalFile
-      ? import.meta.env.VITE_BACKEND_API_URL + originalFile.fileUrl
-      : ""
+    originalFile ? buildFileUrl(originalFile.fileUrl) : ""
   );
   const cargoStore = useSelectedCargoStore();
   const { mutate: uploadPhoto, isLoading: isUploading } = useAddPhotos();

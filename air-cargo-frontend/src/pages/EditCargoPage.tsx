@@ -1,4 +1,5 @@
 import { CargoForm } from "@/components/cargo-form";
+import CargoExpensesSection from "@/components/cargo-expenses-section";
 import Header from "@/components/header";
 import DialogWrapper from "@/components/re/dialog";
 import SecureImage from "@/components/secure-image";
@@ -26,6 +27,7 @@ import {
   useToggleCreateStore,
 } from "@/utils/store";
 import { Cargo, CargoTracking, File } from "@/utils/types";
+import { buildFileUrl } from "@/utils";
 import {
   AlertCircle,
   ArrowLeftSquare,
@@ -254,6 +256,9 @@ export default () => {
             <TabsTrigger value="general">{t("information")}</TabsTrigger>
             <TabsTrigger value="gallery" disabled={toggle.create}>
               {t("gallery")}
+            </TabsTrigger>
+            <TabsTrigger value="expenses" disabled={toggle.create}>
+              {t("expenses")}
             </TabsTrigger>
             <TabsTrigger value="tracking" disabled={toggle.create}>
               {t("tracking")}
@@ -520,11 +525,7 @@ export default () => {
                                 </p>
                               </DialogWrapper>
                               <a
-                                href={
-                                  import.meta.env.VITE_BACKEND_API_URL +
-                                  "/api" +
-                                  file.fileUrl
-                                }
+                                href={buildFileUrl(file.fileUrl)}
                                 target="_blank"
                                 download={file.fileName}
                               >
@@ -549,6 +550,11 @@ export default () => {
                   </div>
                 )}
               </TitleWrapper>
+            )}
+          </TabsContent>
+          <TabsContent value="expenses">
+            {!toggle.create && cargoId && cargoId !== "create" && (
+              <CargoExpensesSection cargoId={cargoId} />
             )}
           </TabsContent>
           <TabsContent value="tracking">

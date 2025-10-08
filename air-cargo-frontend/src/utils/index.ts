@@ -47,3 +47,15 @@ export const decodeJWT = (sub: string) => {
 export const isEmpty = (str: string) => {
   return !!str && str.trim().length === 0;
 };
+
+export const buildFileUrl = (fileUrl?: string) => {
+  if (!fileUrl) return "";
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl;
+  }
+
+  const base = (import.meta.env.VITE_BACKEND_API_URL || "").replace(/\/$/, "");
+  const normalized = fileUrl.startsWith("/") ? fileUrl : `/${fileUrl}`;
+
+  return `${base}${normalized}`;
+};
