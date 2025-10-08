@@ -1,0 +1,80 @@
+spring:
+  profiles:
+    default: dev
+  application:
+    name: fleet-and-cargo
+    security:
+      secret: da7487d5b61b12537a9f81bdaa06dc02a6cf6be6f80a197f0051b2934544a95a
+      expiration: 86400000
+      refresh-token:
+        expiration: 604800000
+    version: @project.version@
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Africa/Mogadishu
+
+
+  docker:
+    compose:
+      enabled: false
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+  jackson:
+    time-zone: Africa/Mogadishu
+
+
+rabbitmq:
+  exchanges:
+    email: email.exchange
+  queue:
+    customer-whatsapp: whatsapp.queue.customer
+    otp-email: email.queue.otp
+  routing-keys:
+    customer-notification: customer.notification
+    otp-notification: email.queue.otp
+server:
+  port: 8085
+  error:
+    include-stacktrace: never
+    include-message: always
+    include-binding-errors: always
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
+netty:
+  tcp:
+    port: 5020
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+whatsapp:
+  api:
+    url: https://graph.facebook.com/v22.0/590434710828504/messages
+    token: EAATCFv5v07gBOy6u7D9tJoGlgrxJhuCme1dLVlCkGGIn4oF7Ql7ba9iZC1jMmgseDdOIEpfojt9mCLiwW8KiH1xH5xsOmpZCk9ayafpgtE0LafbAIdgSvnyNMFEhdk4mQpsZBxZBWQ4z7AJbtZCjCxhAoEz31zfJ1E6NoWGZBtHQ4JQbUT4vErRSoZBWCg5hylhZCLVYXGti5vRTcqZCbFG9EaZAEo5VsZD
+aws:
+  region: ap-northeast-1
+  s3:
+    bucket-name: sahan-fcms
+frontend-url: http://52.68.189.228
+
+
+

@@ -1,0 +1,46 @@
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: greatyaser09@gmail.com
+    password: qjmd cuuo jchs oygw
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  docker:
+    compose:
+      enabled: false
+  jpa:
+    properties:
+      show_sql: true
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+      format_sql: true
+
+      hibernate:
+        format_sql: true
+    hibernate:
+      ddl-auto: update
+  datasource:
+    url: jdbc:postgresql://localhost:5666/cms #jdbc:postgresql://db-postgresql-nyc3-86058-do-user-11489780-0.b.db.ondigitalocean.com:25060/defaultdb
+    username: postgres #doadmin
+    password: 123456
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+server:
+  port: 8085
+  error:
+    include-stacktrace: never
+    include-message: always
+    include-binding-errors: always
+file:
+  storage:
+    provider: LOCAL
+  local:
+    dir: /var/app/uploads
+    base-url: /files
