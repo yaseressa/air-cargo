@@ -10,16 +10,20 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.kq.fleet_and_cargo.exceptions.NotFoundException;
+import com.kq.fleet_and_cargo.models.Cargo;
 import com.kq.fleet_and_cargo.models.Customer;
 import com.kq.fleet_and_cargo.payload.request.CustomerUpdateRequest;
 import com.kq.fleet_and_cargo.payload.response.CustomerNoCargoResponse;
+import com.kq.fleet_and_cargo.repositories.CargoRepository;
 import com.kq.fleet_and_cargo.repositories.CustomerRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public record CustomerService(CustomerRepository customerRepository, ModelMapper modelMapper) {
+public record CustomerService(CustomerRepository customerRepository,
+                              CargoRepository cargoRepository,
+                              ModelMapper modelMapper) {
     public Page<CustomerNoCargoResponse> findAll(String search, int page, int size, String sortBy, String order, String startDate, String endDate) {
         log.info("Fetching all customers");
         Sort sort = Sort.by(Sort.Direction.fromString(order), sortBy);
@@ -65,6 +69,22 @@ public record CustomerService(CustomerRepository customerRepository, ModelMapper
     public Customer findByPhone(String phone) {
         log.info("Fetching customer with phone: {}", phone);
         return customerRepository.findByPhoneNumber(phone).orElseThrow(() -> new NotFoundException("Customer not found"));
+    }
+
+    public Page<Cargo> findSentCargoByCustomer(String customerId, String search, int page, int size, String sortBy, String order) {
+        log.info("Fetching sent cargo for customer: {}", customerId);
+        Sort sort = Sort.by(Sort.Direction.fromString(order), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        String formattedSearch = search == null ? "" : search.replaceFirst("^\\+|^0+", "").trim();
+        return cargoRepository.findAllSentByCustomer(customerId, formattedSearch, pageable);
+    }
+
+    public Page<Cargo> findReceivedCargoByCustomer(String customerId, String search, int page, int size, String sortBy, String order) {
+        log.info("Fetching received cargo for customer: {}", customerId);
+        Sort sort = Sort.by(Sort.Direction.fromString(order), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        String formattedSearch = search == null ? "" : search.replaceFirst("^\\+|^0+", "").trim();
+        return cargoRepository.findAllReceivedByCustomer(customerId, formattedSearch, pageable);
     }
 
 }

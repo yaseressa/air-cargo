@@ -471,6 +471,17 @@ export interface CargoResponseType {
   empty?: boolean;
 }
 
+export interface PickupCityRevenueReport {
+  pickupLocation: string;
+  totalRevenue: number;
+}
+
+export interface CargoTypeSummaryReport {
+  cargoType: string;
+  totalShipments: number;
+  totalRevenue: number;
+}
+
 export type Notification = {
   id: string;
   message: string;

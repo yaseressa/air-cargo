@@ -1,4 +1,4 @@
-import { ColumnDef } from "@/components/data-table";
+import DataTable, { ColumnDef } from "@/components/data-table";
 import Header from "@/components/header";
 import { Listing, VerticalListing } from "@/components/listing";
 import DialogWrapper from "@/components/re/dialog";
@@ -7,46 +7,422 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { TitleWrapper } from "@/components/wrapper";
+import { useDeleteCargo, useDeleteCustomer } from "@/services/calls/mutators";
 import {
-  useDeleteCargo,
-  useDeleteCustomer,
-  useDeleteFile,
-} from "@/services/calls/mutators";
-import { useCustomer } from "@/services/calls/queries";
+  useCustomer,
+  useCustomerReceivedCargos,
+  useCustomerSentCargos,
+} from "@/services/calls/queries";
 import {
-  useReceivedCargoStore,
+  useCustomerReceivedCargoTableStore,
+  useCustomerSentCargoTableStore,
   useSelectedCustomerStore,
-  useSentCargoStore,
 } from "@/utils/store";
 import {
+  ArrowDown,
   ArrowLeftSquare,
-  PlusSquareIcon,
+  ArrowUp,
+  ArrowUpDown,
   SquarePen,
   Trash,
 } from "lucide-react";
-import { ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 export default () => {
   const { t } = useTranslation();
   const { id } = useParams();
+  const navigate = useNavigate();
   const { mutate: deleteCargo } = useDeleteCargo();
   const customerStore = useSelectedCustomerStore();
-  const [receivedCargoStore, sentCargoStore] = [
-    useReceivedCargoStore(),
-    useSentCargoStore(),
-  ];
-  const { data, isLoading: customerLoading } = useCustomer(id!);
-  const [{ mutate: deleteCustomer }] = [useDeleteFile(), useDeleteCustomer()];
+  const {
+    data: sentTableData,
+    columns: sentColumns,
+    currentPage: sentCurrentPage,
+    perPage: sentPerPage,
+    totalElements: sentTotalElements,
+    totalPages: sentTotalPages,
+    sortBy: sentSortBy,
+    order: sentOrder,
+    searchCriteria: sentSearchCriteria,
+    setColumns: setSentColumns,
+    setSortBy: setSentSortBy,
+    setOrder: toggleSentOrder,
+    setTotalElements: setSentTotalElements,
+    setTotalPages: setSentTotalPages,
+    setPerPage: setSentPerPage,
+    setSearchCriteria: setSentSearchCriteria,
+    setPageNo: setSentPageNo,
+    resetPageNo: resetSentPageNo,
+    put: putSentCargo,
+    clear: clearSentCargo,
+  } = useCustomerSentCargoTableStore();
+  const {
+    data: receivedTableData,
+    columns: receivedColumns,
+    currentPage: receivedCurrentPage,
+    perPage: receivedPerPage,
+    totalElements: receivedTotalElements,
+    totalPages: receivedTotalPages,
+    sortBy: receivedSortBy,
+    order: receivedOrder,
+    searchCriteria: receivedSearchCriteria,
+    setColumns: setReceivedColumns,
+    setSortBy: setReceivedSortBy,
+    setOrder: toggleReceivedOrder,
+    setTotalElements: setReceivedTotalElements,
+    setTotalPages: setReceivedTotalPages,
+    setPerPage: setReceivedPerPage,
+    setSearchCriteria: setReceivedSearchCriteria,
+    setPageNo: setReceivedPageNo,
+    resetPageNo: resetReceivedPageNo,
+    put: putReceivedCargo,
+    clear: clearReceivedCargo,
+  } = useCustomerReceivedCargoTableStore();
+  const { data: customerData, isLoading: customerLoading } = useCustomer(id!);
+  const { mutate: deleteCustomer } = useDeleteCustomer();
   const [verifyName, setVerifyName] = useState("");
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  const ITEMS_PER_PAGE = 5;
-  const [sentPage, setSentPage] = useState(0);
-  const [receivedPage, setReceivedPage] = useState(0);
+  const {
+    data: sentCargoPage,
+    isLoading: sentLoading,
+    isFetching: isFetchingSent,
+    refetch: refetchSent,
+  } = useCustomerSentCargos(
+    id,
+    sentCurrentPage,
+    sentPerPage,
+    sentSortBy,
+    sentOrder,
+    sentSearchCriteria
+  );
+
+  const {
+    data: receivedCargoPage,
+    isLoading: receivedLoading,
+    isFetching: isFetchingReceived,
+    refetch: refetchReceived,
+  } = useCustomerReceivedCargos(
+    id,
+    receivedCurrentPage,
+    receivedPerPage,
+    receivedSortBy,
+    receivedOrder,
+    receivedSearchCriteria
+  );
+
+  useEffect(() => {
+    if (!customerLoading && customerData) {
+      customerStore.setCustomer(customerData);
+      setLoading(false);
+    }
+  }, [customerLoading, customerData, customerStore]);
+
+  useEffect(() => {
+    clearSentCargo();
+    clearReceivedCargo();
+    resetSentPageNo();
+    resetReceivedPageNo();
+  }, [id, clearSentCargo, clearReceivedCargo, resetSentPageNo, resetReceivedPageNo]);
+
+  useEffect(() => {
+    if (sentCargoPage) {
+      putSentCargo(sentCargoPage);
+      setSentTotalElements(sentCargoPage.totalElements ?? 0);
+      setSentTotalPages(sentCargoPage.totalPages ?? 0);
+    }
+  }, [
+    sentCargoPage,
+    putSentCargo,
+    setSentTotalElements,
+    setSentTotalPages,
+  ]);
+
+  useEffect(() => {
+    if (receivedCargoPage) {
+      putReceivedCargo(receivedCargoPage);
+      setReceivedTotalElements(
+        receivedCargoPage.totalElements ?? 0
+      );
+      setReceivedTotalPages(receivedCargoPage.totalPages ?? 0);
+    }
+  }, [
+    receivedCargoPage,
+    putReceivedCargo,
+    setReceivedTotalElements,
+    setReceivedTotalPages,
+  ]);
+
+  useEffect(() => {
+    if (!id) return;
+    refetchSent();
+  }, [
+    id,
+    sentCurrentPage,
+    sentPerPage,
+    sentOrder,
+    sentSortBy,
+    sentSearchCriteria,
+    refetchSent,
+  ]);
+
+  useEffect(() => {
+    if (!id) return;
+    refetchReceived();
+  }, [
+    id,
+    receivedCurrentPage,
+    receivedPerPage,
+    receivedOrder,
+    receivedSortBy,
+    receivedSearchCriteria,
+    refetchReceived,
+  ]);
+
+  useEffect(() => {
+    setSentColumns([
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSentSortBy("createdAt");
+              toggleSentOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("createdAt")}</span>
+            {sentSortBy === "createdAt" ? (
+              sentOrder === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "createdAt",
+        cell: ({ row }) => <p>{row.original.createdAt}</p>,
+      },
+      {
+        header: t("receiver"),
+        accessorKey: "receiver",
+        cell: ({ row }) => (
+          <Button variant="link">
+            <Link to={`/customers/${row.original.receiver?.id}`}>
+              {row.original.receiver?.firstName} {row.original.receiver?.lastName}
+            </Link>
+          </Button>
+        ),
+      },
+      {
+        header: t("pickupLocation"),
+        accessorKey: "pickupLocation",
+        cell: ({ row }) => <p>{row.original.pickupLocation}</p>,
+      },
+      {
+        header: t("destination"),
+        accessorKey: "destination",
+        cell: ({ row }) => <p>{row.original.destination}</p>,
+      },
+      {
+        header: t("cargoType"),
+        accessorKey: "cargoType",
+        cell: ({ row }) => <p>{row.original.cargoType}</p>,
+      },
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSentSortBy("quantity");
+              toggleSentOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("quantity")}</span>
+            {sentSortBy === "quantity" ? (
+              sentOrder === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "quantity",
+        cell: ({ row }) => <p>{row.original.quantity}</p>,
+      },
+      {
+        header: t("totalWeight"),
+        accessorKey: "totalWeight",
+        cell: ({ row }) => (
+          <p>{row.original.totalWeight ?? row.original.weight}</p>
+        ),
+      },
+      {
+        header: t("actions"),
+        accessorKey: "actions",
+        cell: ({ row }) => (
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              onClick={() =>
+                navigate(`/cargo/${customerStore.customer?.id}/${row.original.id}`)
+              }
+            >
+              <SquarePen size={16} className="text-primary" />
+            </Button>
+            <DialogWrapper
+              title={t("deleteCargo")}
+              key={row.original.id}
+              trigger={
+                <Button variant="ghost">
+                  <Trash size={16} className="text-destructive" />
+                </Button>
+              }
+              footer={
+                <Button
+                  onClick={() => {
+                    deleteCargo(row.original.id, {
+                      onSuccess: () => {
+                        toast({
+                          title: t("cargoDeleted"),
+                          description: t("cargoDeletedSuccessfully"),
+                        });
+                        void refetchSent();
+                      },
+                      onError: () => {
+                        toast({
+                          title: t("error"),
+                          description: t("failedToDeleteCargo"),
+                          variant: "destructive",
+                        });
+                      },
+                    });
+                  }}
+                >
+                  {t("delete")}
+                </Button>
+              }
+            >
+              {t("confirmDeleteCargo")}
+            </DialogWrapper>
+          </div>
+        ),
+      },
+    ] as ColumnDef[]);
+  }, [t, setSentColumns, setSentSortBy, toggleSentOrder, sentSortBy, sentOrder, navigate, customerStore.customer?.id]);
+
+  useEffect(() => {
+    setReceivedColumns([
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setReceivedSortBy("createdAt");
+              toggleReceivedOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("createdAt")}</span>
+            {receivedSortBy === "createdAt" ? (
+              receivedOrder === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "createdAt",
+        cell: ({ row }) => <p>{row.original.createdAt}</p>,
+      },
+      {
+        header: t("sender"),
+        accessorKey: "sender",
+        cell: ({ row }) => (
+          <Button variant="link">
+            <Link to={`/customers/${row.original.sender?.id}`}>
+              {row.original.sender?.firstName} {row.original.sender?.lastName}
+            </Link>
+          </Button>
+        ),
+      },
+      {
+        header: t("pickupLocation"),
+        accessorKey: "pickupLocation",
+        cell: ({ row }) => <p>{row.original.pickupLocation}</p>,
+      },
+      {
+        header: t("destination"),
+        accessorKey: "destination",
+        cell: ({ row }) => <p>{row.original.destination}</p>,
+      },
+      {
+        header: t("cargoType"),
+        accessorKey: "cargoType",
+        cell: ({ row }) => <p>{row.original.cargoType}</p>,
+      },
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setReceivedSortBy("quantity");
+              toggleReceivedOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("quantity")}</span>
+            {receivedSortBy === "quantity" ? (
+              receivedOrder === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "quantity",
+        cell: ({ row }) => <p>{row.original.quantity}</p>,
+      },
+      {
+        header: t("totalWeight"),
+        accessorKey: "totalWeight",
+        cell: ({ row }) => (
+          <p>{row.original.totalWeight ?? row.original.weight}</p>
+        ),
+      },
+      {
+        header: t("actions"),
+        accessorKey: "actions",
+        cell: ({ row }) => (
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              onClick={() =>
+                navigate(`/cargo/${row.original.sender?.id}/${row.original.id}`)
+              }
+            >
+              <SquarePen size={16} className="text-primary" />
+            </Button>
+          </div>
+        ),
+      },
+    ] as ColumnDef[]);
+  }, [t, setReceivedColumns, setReceivedSortBy, toggleReceivedOrder, receivedSortBy, receivedOrder, navigate]);
 
   const customerDetailsColumns: ColumnDef[] = [
     {
@@ -76,225 +452,13 @@ export default () => {
     {
       header: t("gender"),
       accessorKey: t("gender"),
-      cell: ({ row }) => {
-        return (
-          <Badge variant={"outline"}>
-            {t("genderCategory." + row.gender.toLowerCase())}
-          </Badge>
-        );
-      },
-    },
-  ];
-
-  const sentCargoDetailsColumns: ColumnDef[] = [
-    {
-      header: t("createdAt"),
-      accessorKey: t("createdAt"),
-      cell: ({ row }) => <p>{row.createdAt}</p>,
-    },
-    {
-      header: t("receiver"),
-      accessorKey: t("receiver"),
       cell: ({ row }) => (
-        <Button variant={"link"}>
-          <Link to={"/customers/" + row.receiver.id}>
-            {row.receiver.firstName} {row.receiver.lastName}
-          </Link>
-        </Button>
-      ),
-    },
-    {
-      header: t("pickupLocation"),
-      accessorKey: t("pickupLocation"),
-      cell: ({ row }) => <p>{row.pickupLocation}</p>,
-    },
-    {
-      header: t("destination"),
-      accessorKey: t("destination"),
-      cell: ({ row }) => <p>{row.destination}</p>,
-    },
-    {
-      header: t("cargoType"),
-      accessorKey: t("cargoType"),
-      cell: ({ row }) => <p>{row.cargoType}</p>,
-    },
-    {
-      header: t("weight"),
-      accessorKey: t("weight"),
-      cell: ({ row }) => <p>{row.weight}</p>,
-    },
-    {
-      header: t("quantity"),
-      accessorKey: t("quantity"),
-      cell: ({ row }) => <p>{row.quantity}</p>,
-    },
-    {
-      header: t("totalWeight"),
-      accessorKey: t("totalWeight"),
-      cell: ({ row }) => <p>{row.weight}</p>,
-    },
-    {
-      header: t("actions"),
-      accessorKey: t("actions"),
-      cell: ({ row }) => (
-        <div className="flex gap-3">
-          <Button
-            variant={"ghost"}
-            onClick={() =>
-              navigate("/cargo/" + customerStore.customer?.id + "/" + row.id)
-            }
-          >
-            <SquarePen size={16} className="text-primary" />
-          </Button>
-          <DialogWrapper
-            title={t("deleteCargo")}
-            key={row.id}
-            trigger={
-              <Button variant={"ghost"}>
-                <Trash size={16} className="text-destructive" />
-              </Button>
-            }
-            footer={
-              <Button
-                onClick={() => {
-                  deleteCargo(row.id, {
-                    onSuccess: () => {
-                      sentCargoStore.deleteCargo(row.id);
-                      navigate("/customers/" + row.sender.id);
-                      toast({
-                        title: t("cargoDeleted"),
-                        description: t("cargoDeletedSuccessfully"),
-                      });
-                    },
-                    onError: () => {
-                      toast({
-                        title: t("error"),
-                        description: t("failedToDeleteCargo"),
-                        variant: "destructive",
-                      });
-                    },
-                  });
-                }}
-              >
-                {t("delete")}
-              </Button>
-            }
-          >
-            {t("confirmDeleteCargo")}
-          </DialogWrapper>
-        </div>
+        <Badge variant="outline">
+          {t("genderCategory." + row.gender.toLowerCase())}
+        </Badge>
       ),
     },
   ];
-
-  const receivedCargoDetailsColumns: ColumnDef[] = [
-    {
-      header: t("createdAt"),
-      accessorKey: t("createdAt"),
-      cell: ({ row }) => <p>{row.createdAt}</p>,
-    },
-    {
-      header: t("sender"),
-      accessorKey: t("sender"),
-      cell: ({ row }) => (
-        <Button variant={"link"}>
-          <Link to={"/customers/" + row.sender.id}>
-            {row.sender.firstName} {row.sender.lastName}
-          </Link>
-        </Button>
-      ),
-    },
-    {
-      header: t("pickupLocation"),
-      accessorKey: t("pickupLocation"),
-      cell: ({ row }) => <p>{row.pickupLocation}</p>,
-    },
-    {
-      header: t("destination"),
-      accessorKey: t("destination"),
-      cell: ({ row }) => <p>{row.destination}</p>,
-    },
-    {
-      header: t("cargoType"),
-      accessorKey: t("cargoType"),
-      cell: ({ row }) => <p>{row.cargoType}</p>,
-    },
-    {
-      header: t("weight"),
-      accessorKey: t("weight"),
-      cell: ({ row }) => <p>{row.weight}</p>,
-    },
-    {
-      header: t("quantity"),
-      accessorKey: t("quantity"),
-      cell: ({ row }) => <p>{row.quantity}</p>,
-    },
-    {
-      header: t("totalWeight"),
-      accessorKey: t("totalWeight"),
-      cell: ({ row }) => <p>{row.weight}</p>,
-    },
-    {
-      header: t("actions"),
-      accessorKey: t("actions"),
-      cell: ({ row }) => (
-        <div className="flex gap-3">
-          <Button
-            variant={"ghost"}
-            onClick={() => navigate("/cargo/" + row.sender.id + "/" + row.id)}
-          >
-            <SquarePen size={16} className="text-primary" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
-  const totalSentPages = Math.ceil(
-    (sentCargoStore.data?.length ?? 0) / ITEMS_PER_PAGE
-  );
-  const totalReceivedPages = Math.ceil(
-    (receivedCargoStore.data?.length ?? 0) / ITEMS_PER_PAGE
-  );
-
-  const paginatedSentCargos = useMemo(() => {
-    const start = sentPage * ITEMS_PER_PAGE;
-    return (sentCargoStore.data ?? []).slice(start, start + ITEMS_PER_PAGE);
-  }, [sentCargoStore.data, sentPage]);
-
-  const paginatedReceivedCargos = useMemo(() => {
-    const start = receivedPage * ITEMS_PER_PAGE;
-    return (receivedCargoStore.data ?? []).slice(start, start + ITEMS_PER_PAGE);
-  }, [receivedCargoStore.data, receivedPage]);
-
-  useEffect(() => {
-    const total = Math.ceil(
-      (sentCargoStore.data?.length ?? 0) / ITEMS_PER_PAGE
-    );
-    if (sentPage > 0 && (total === 0 || sentPage >= total)) {
-      setSentPage(Math.max(total - 1, 0));
-    }
-  }, [sentCargoStore.data, sentPage]);
-
-  useEffect(() => {
-    const total = Math.ceil(
-      (receivedCargoStore.data?.length ?? 0) / ITEMS_PER_PAGE
-    );
-    if (receivedPage > 0 && (total === 0 || receivedPage >= total)) {
-      setReceivedPage(Math.max(total - 1, 0));
-    }
-  }, [receivedCargoStore.data, receivedPage]);
-
-  useEffect(() => {
-    if (!customerLoading) {
-      customerStore.setCustomer(data!);
-      receivedCargoStore.put(data?.receivedCargo!);
-      sentCargoStore.put(data?.sentCargo!);
-      setLoading(false);
-    }
-  }, [customerLoading]);
-
-  useEffect(() => {}, [customerStore.customer]);
 
   return (
     <>
@@ -303,21 +467,21 @@ export default () => {
         <main className="flex flex-col justify-start items-stretch gap-4 md:gap-14 m-2 overflow-x-hidden">
           <div className="flex justify-between">
             <Button
-              variant={"ghost"}
-              size={"icon"}
+              variant="ghost"
+              size="icon"
               onClick={() => navigate("/customers")}
             >
               <ArrowLeftSquare className="text-primary" size={20} />
             </Button>
             <div className="flex justify-center items-center">
-              <Badge variant={"outline"}>
-                {t("customerId")}: {customerStore.customer?.id!}
+              <Badge variant="outline">
+                {t("customerId")}: {customerStore.customer?.id}
               </Badge>
             </div>
             <DialogWrapper
               title={t("deleteCustomer")}
               trigger={
-                <Button variant={"ghost"} size={"icon"}>
+                <Button variant="ghost" size="icon">
                   <Trash size={20} className="text-destructive" />
                 </Button>
               }
@@ -326,9 +490,7 @@ export default () => {
                   onClick={() => {
                     if (
                       verifyName.trim() ===
-                      customerStore.customer?.firstName!.trim() +
-                        " " +
-                        customerStore.customer?.lastName!.trim()
+                      `${customerStore.customer?.firstName?.trim()} ${customerStore.customer?.lastName?.trim()}`
                     ) {
                       deleteCustomer(customerStore.customer?.id!, {
                         onSuccess: () => {
@@ -363,7 +525,7 @@ export default () => {
                 <p>
                   {t("confirmDeleteCustomer1")}
                   <code className="bg-muted rounded-md p-1">
-                    {customerStore.customer?.firstName}{" "}
+                    {customerStore.customer?.firstName} {" "}
                     {customerStore.customer?.lastName}
                   </code>
                   ?
@@ -377,9 +539,9 @@ export default () => {
           </div>
           <div className="flex md:flex-row flex-col justify-evenly md:items-center gap-3">
             <div className="flex justify-center items-center flex-col gap-2 animate-fade-right">
-              <Badge variant={"outline"}>{t("createdAt")}:</Badge>
+              <Badge variant="outline">{t("createdAt")}:</Badge>
               <p className="text-sm font-light">
-                {customerStore.customer?.createdAt!}
+                {customerStore.customer?.createdAt}
               </p>
             </div>
             <TitleWrapper
@@ -402,111 +564,61 @@ export default () => {
               </div>
             </TitleWrapper>
             <div className="flex justify-center items-center flex-col gap-2 md:order-3 order-2 animate-fade-left">
-              <Badge variant={"outline"}>{t("updatedAt")}:</Badge>
+              <Badge variant="outline">{t("updatedAt")}:</Badge>
               <p className="text-sm font-light">
-                {customerStore.customer?.updatedAt!}
+                {customerStore.customer?.updatedAt}
               </p>
             </div>
           </div>
           <div className="flex flex-col justify-stretch gap-3">
             <TitleWrapper
               title={t("sentCargo")}
-              modalNumber={0}
-              optype="create"
               className="flex-1 animate-fade-right"
-              trigger={
-                <PlusSquareIcon
-                  className="cursor-pointer"
-                  size={16}
-                  onClick={() =>
-                    navigate("/cargo/" + customerStore.customer?.id + "/create")
-                  }
-                />
-              }
             >
-              <Listing
-                columns={sentCargoDetailsColumns}
-                data={paginatedSentCargos}
+              <DataTable
+                loading={loading || sentLoading}
+                refetching={isFetchingSent}
+                columns={sentColumns}
+                tableData={sentTableData?.content ?? []}
+                headerShown
+                pagination={{
+                  currentPage: sentCurrentPage,
+                  totalPages: sentTotalPages,
+                  totalElements: sentTotalElements,
+                  perPage: sentPerPage,
+                  order: sentOrder,
+                  sortBy: sentSortBy,
+                }}
+                setPerPage={setSentPerPage}
+                setSearchCriteria={setSentSearchCriteria}
+                setPageNo={setSentPageNo}
+                resetPageNo={resetSentPageNo}
+                createLink={`/cargo/${customerStore.customer?.id}/create`}
               />
-              <div className="mt-3 flex items-center justify-end gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {totalSentPages > 0
-                    ? `${sentPage + 1} / ${totalSentPages}`
-                    : "0 / 0"}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={sentPage === 0 || totalSentPages === 0}
-                  onClick={() => setSentPage((prev) => Math.max(prev - 1, 0))}
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                  <span className="sr-only">
-                    {t("pagination.previousPage")}
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={
-                    totalSentPages === 0 || sentPage >= totalSentPages - 1
-                  }
-                  onClick={() =>
-                    setSentPage((prev) =>
-                      Math.min(prev + 1, Math.max(totalSentPages - 1, 0))
-                    )
-                  }
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                  <span className="sr-only">{t("pagination.nextPage")}</span>
-                </Button>
-              </div>
             </TitleWrapper>
             <TitleWrapper
               title={t("receivedCargo")}
-              modalNumber={4}
               className="flex-1 animate-fade-left fade-in-90"
             >
-              <Listing
-                columns={receivedCargoDetailsColumns}
-                data={paginatedReceivedCargos}
+              <DataTable
+                loading={loading || receivedLoading}
+                refetching={isFetchingReceived}
+                columns={receivedColumns}
+                tableData={receivedTableData?.content ?? []}
+                headerShown
+                pagination={{
+                  currentPage: receivedCurrentPage,
+                  totalPages: receivedTotalPages,
+                  totalElements: receivedTotalElements,
+                  perPage: receivedPerPage,
+                  order: receivedOrder,
+                  sortBy: receivedSortBy,
+                }}
+                setPerPage={setReceivedPerPage}
+                setSearchCriteria={setReceivedSearchCriteria}
+                setPageNo={setReceivedPageNo}
+                resetPageNo={resetReceivedPageNo}
               />
-              <div className="mt-3 flex items-center justify-end gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {totalReceivedPages > 0
-                    ? `${receivedPage + 1} / ${totalReceivedPages}`
-                    : "0 / 0"}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={receivedPage === 0 || totalReceivedPages === 0}
-                  onClick={() =>
-                    setReceivedPage((prev) => Math.max(prev - 1, 0))
-                  }
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                  <span className="sr-only">
-                    {t("pagination.previousPage")}
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={
-                    totalReceivedPages === 0 ||
-                    receivedPage >= totalReceivedPages - 1
-                  }
-                  onClick={() =>
-                    setReceivedPage((prev) =>
-                      Math.min(prev + 1, Math.max(totalReceivedPages - 1, 0))
-                    )
-                  }
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                  <span className="sr-only">{t("pagination.nextPage")}</span>
-                </Button>
-              </div>
             </TitleWrapper>
           </div>
         </main>

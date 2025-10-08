@@ -4,6 +4,7 @@ import {
   AuthResponse,
   Cargo,
   CargoResponseType,
+  CargoTypeSummaryReport,
   CargoTracking,
   Customer,
   CustomersResponseType,
@@ -15,6 +16,7 @@ import {
   NotificationResponseType,
   User,
   UsersResponseType,
+  PickupCityRevenueReport,
 } from "../../utils/types";
 
 const fetchCustomers = async (
@@ -492,6 +494,111 @@ export const useCustomer = (id?: string) => {
   );
 };
 
+const fetchCustomerSentCargos = async (
+  customerId: string,
+  page: number,
+  size: number,
+  sortBy: string,
+  order: "asc" | "desc",
+  search: string
+): Promise<CargoResponseType> => {
+  const { data } = await axiosApiClient.get(
+    `/customers/${customerId}/sent-cargos`,
+    {
+      params: {
+        page,
+        size,
+        sortBy,
+        order,
+        search,
+      },
+    }
+  );
+  return data;
+};
+
+export const useCustomerSentCargos = (
+  customerId?: string,
+  page: number = 0,
+  size: number = 5,
+  sortBy: string = "createdAt",
+  order: "asc" | "desc" = "desc",
+  search: string = ""
+) => {
+  return useQuery<CargoResponseType | undefined>(
+    [
+      "customerSentCargos",
+      customerId,
+      page,
+      size,
+      sortBy,
+      order,
+      search,
+    ],
+    () => fetchCustomerSentCargos(customerId!, page, size, sortBy, order, search),
+    {
+      enabled: !!customerId,
+      keepPreviousData: true,
+      onError: (error) => {
+        console.error("Error fetching customer sent cargos:", error);
+      },
+    }
+  );
+};
+
+const fetchCustomerReceivedCargos = async (
+  customerId: string,
+  page: number,
+  size: number,
+  sortBy: string,
+  order: "asc" | "desc",
+  search: string
+): Promise<CargoResponseType> => {
+  const { data } = await axiosApiClient.get(
+    `/customers/${customerId}/received-cargos`,
+    {
+      params: {
+        page,
+        size,
+        sortBy,
+        order,
+        search,
+      },
+    }
+  );
+  return data;
+};
+
+export const useCustomerReceivedCargos = (
+  customerId?: string,
+  page: number = 0,
+  size: number = 5,
+  sortBy: string = "createdAt",
+  order: "asc" | "desc" = "desc",
+  search: string = ""
+) => {
+  return useQuery<CargoResponseType | undefined>(
+    [
+      "customerReceivedCargos",
+      customerId,
+      page,
+      size,
+      sortBy,
+      order,
+      search,
+    ],
+    () =>
+      fetchCustomerReceivedCargos(customerId!, page, size, sortBy, order, search),
+    {
+      enabled: !!customerId,
+      keepPreviousData: true,
+      onError: (error) => {
+        console.error("Error fetching customer received cargos:", error);
+      },
+    }
+  );
+};
+
 
 const fetchCustomerByPhone = async (phone: string): Promise<Customer> => {
   const encodedPhone = encodeURIComponent(phone);
@@ -507,6 +614,75 @@ export const useCustomerByPhone = (phone?: string) => {
       enabled: !!phone,
       onError: (error) => {
         console.error("Error fetching customer by phone:", error);
+      },
+    }
+  );
+};
+
+
+const fetchPickupRevenueReport = async (
+  fromDate: string,
+  toDate: string,
+  search: string
+): Promise<PickupCityRevenueReport[]> => {
+  const { data } = await axiosApiClient.get(
+    "/reports/cargos/pickup-city-revenue/preview",
+    {
+      params: {
+        startDate: fromDate,
+        endDate: toDate,
+        search,
+      },
+    }
+  );
+  return data;
+};
+
+export const usePickupRevenueReport = (
+  fromDate: string,
+  toDate: string,
+  search: string
+) => {
+  return useQuery<PickupCityRevenueReport[]>(
+    ["pickupRevenueReport", fromDate, toDate, search],
+    () => fetchPickupRevenueReport(fromDate, toDate, search),
+    {
+      onError: (error) => {
+        console.error("Error fetching pickup revenue report:", error);
+      },
+    }
+  );
+};
+
+const fetchCargoTypeDistributionReport = async (
+  fromDate: string,
+  toDate: string,
+  search: string
+): Promise<CargoTypeSummaryReport[]> => {
+  const { data } = await axiosApiClient.get(
+    "/reports/cargos/type-distribution/preview",
+    {
+      params: {
+        startDate: fromDate,
+        endDate: toDate,
+        search,
+      },
+    }
+  );
+  return data;
+};
+
+export const useCargoTypeDistributionReport = (
+  fromDate: string,
+  toDate: string,
+  search: string
+) => {
+  return useQuery<CargoTypeSummaryReport[]>(
+    ["cargoTypeDistributionReport", fromDate, toDate, search],
+    () => fetchCargoTypeDistributionReport(fromDate, toDate, search),
+    {
+      onError: (error) => {
+        console.error("Error fetching cargo type distribution report:", error);
       },
     }
   );

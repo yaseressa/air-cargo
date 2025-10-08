@@ -1,30 +1,49 @@
-import { DateRange } from "@/components/data-table";
+import DataTable from "@/components/data-table";
 import Header from "@/components/header";
-
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addYears, format } from "date-fns";
-import { Scroll } from "lucide-react";
-import { useState } from "react";
+import {
+  useCargos,
+  useCustomers,
+  useCargoTypeDistributionReport,
+  usePickupRevenueReport,
+} from "@/services/calls/queries";
+import {
+  useCargoReportsStore,
+  useCargoTypeDistributionReportStore,
+  useCustomerReportsStore,
+  usePickupRevenueReportStore,
+} from "@/utils/store";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-export default () => {
+const ReportsPage = () => {
+  const { t } = useTranslation();
+
   return (
     <>
       <Header />
       <main className="flex flex-col justify-start items-stretch gap-4 m-2 p-4 sm:px-6 sm:py-0 md:gap-14 my-2">
         <Tabs defaultValue="customers" className="w-full">
-          <TabsList className="grid md:w-[400px] grid-cols-2">
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="cargos">Cargo</TabsTrigger>
+          <TabsList className="grid md:w-[600px] grid-cols-2 md:grid-cols-4">
+            <TabsTrigger value="customers">{t("customers")}</TabsTrigger>
+            <TabsTrigger value="cargos">{t("cargo")}</TabsTrigger>
+            <TabsTrigger value="pickupRevenue">{t("pickupRevenue")}</TabsTrigger>
+            <TabsTrigger value="cargoTypes">{t("cargoTypeDistribution")}</TabsTrigger>
           </TabsList>
           <TabsContent value="customers">
-            <CustomersTab />
+            <CustomersReportTab />
           </TabsContent>
           <TabsContent value="cargos">
-            <CargosTab />
+            <CargosReportTab />
+          </TabsContent>
+          <TabsContent value="pickupRevenue">
+            <PickupRevenueReportTab />
+          </TabsContent>
+          <TabsContent value="cargoTypes">
+            <CargoTypeDistributionTab />
           </TabsContent>
         </Tabs>
       </main>
@@ -32,213 +51,474 @@ export default () => {
   );
 };
 
-const CustomersTab = () => {
-  const [searchCriteria, setSearchCriteria] = useState<string>("");
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: format(addYears(new Date(), -1), "yyyy-MM-dd'T'HH:mm"),
-    to: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-  });
-  const [phoneSwitch, setPhoneSwitch] = useState<boolean>(false);
+const CustomersReportTab = () => {
+  const { t } = useTranslation();
+  const {
+    data,
+    columns,
+    currentPage,
+    perPage,
+    totalElements,
+    totalPages,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    setColumns,
+    setPageNo,
+    resetPageNo,
+    setPerPage,
+    setTotalElements,
+    setTotalPages,
+    setSearchCriteria,
+    setSortBy,
+    setOrder,
+    setFromDate,
+    setToDate,
+    put,
+  } = useCustomerReportsStore();
 
-  const downloadFile = async () => {
-    const apiUrl =
-      import.meta.env.VITE_BACKEND_API_URL +
-      `/api/reports/customers?search=${searchCriteria.replace(
-        "+",
-        ""
-      )}&startDate=${dateRange.from}&endDate=${dateRange.to}`;
-    const headers = new Headers();
-    headers.append("Authorization", "Bearer " + localStorage.getItem("token")); // Add the Authorization header
+  const {
+    data: customersPage,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useCustomers(
+    currentPage,
+    perPage,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate
+  );
 
-    try {
-      const response = await fetch(apiUrl, { method: "GET", headers });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch the file: ${response.status}`);
-      }
-
-      // Convert the response into a Blob and create a downloadable link
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = "CustomerReports.xlsx"; // Specify the file name
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error("Error downloading the file:", error);
+  useEffect(() => {
+    if (customersPage) {
+      put(customersPage);
+      setTotalPages(customersPage.totalPages ?? 0);
+      setTotalElements(customersPage.totalElements ?? 0);
     }
-  };
+  }, [customersPage, put, setTotalElements, setTotalPages]);
+
+  useEffect(() => {
+    refetch();
+  }, [
+    currentPage,
+    perPage,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    refetch,
+  ]);
+
+  useEffect(() => {
+    setColumns([
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSortBy("createdAt");
+              setOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("createdAt")}</span>
+            {sortBy === "createdAt" ? (
+              order === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "createdAt",
+        cell: ({ row }) => <p>{row.original.createdAt}</p>,
+      },
+      {
+        header: t("customer"),
+        accessorKey: "customer",
+        cell: ({ row }) => (
+          <Link to={`/customers/${row.original.id}`} className="text-primary">
+            {row.original.firstName} {row.original.lastName}
+          </Link>
+        ),
+      },
+      {
+        header: t("phoneNumber"),
+        accessorKey: "phoneNumber",
+        cell: ({ row }) => <p>{row.original.phoneNumber}</p>,
+      },
+      {
+        header: t("email"),
+        accessorKey: "email",
+        cell: ({ row }) => <p>{row.original.email}</p>,
+      },
+    ]);
+  }, [t, setColumns, setSortBy, setOrder, sortBy, order]);
 
   return (
-    <form
-      onSubmit={(e) => e.preventDefault()}
-      className="flex md:flex-row flex-col justify-between gap-4 w-full my-2"
-    >
-      {" "}
-      <div className="flex-1 flex flex-col gap-4">
-        {!phoneSwitch ? (
-          <Input
-            className="h-10"
-            value={searchCriteria}
-            onChange={(event) => setSearchCriteria(event.target.value)}
-            onSubmitCapture={downloadFile}
-          />
-        ) : (
-          <PhoneInput
-            value={searchCriteria}
-            defaultCountry="SO"
-            onChange={(event) => setSearchCriteria(event)}
-            className=" rounded !m-0 !p-0"
-            onSubmitCapture={downloadFile}
-          />
-        )}
-        <div className="flex items-center gap-2">
-          <p className="text-xs">Search by phone</p>
-          <Switch checked={phoneSwitch} onCheckedChange={setPhoneSwitch} />
-        </div>
-      </div>
-      <div className="flex md:flex-row flex-col justify-evenly flex-1 gap-4">
-        <Input
-          className="h-10"
-          type="datetime-local"
-          value={dateRange.from! as string}
-          onChange={(e) =>
-            setDateRange((v) => ({
-              ...v,
-              from: e.target.value,
-            }))
-          }
-        />
-        <Input
-          className="h-10"
-          type="datetime-local"
-          value={dateRange.to! as string}
-          onChange={(e) =>
-            setDateRange((v) => ({
-              ...v,
-              to: e.target.value,
-            }))
-          }
-        />
-      </div>
-      <Button
-        variant={"secondary"}
-        className="h-10 shadow-none flex gap-x-3"
-        onClick={downloadFile}
-      >
-        <div>
-          <Scroll size={20} className="text-primary" />
-        </div>
-        <p>Download Excel</p>
-      </Button>
-    </form>
+    <DataTable
+      loading={isLoading}
+      refetching={isFetching}
+      columns={columns}
+      tableData={data?.content ?? []}
+      pagination={{
+        currentPage,
+        totalPages,
+        totalElements,
+        perPage,
+        order,
+        sortBy,
+      }}
+      setPerPage={setPerPage}
+      setSearchCriteria={setSearchCriteria}
+      setPageNo={setPageNo}
+      resetPageNo={resetPageNo}
+      setFromDate={setFromDate}
+      setToDate={setToDate}
+      report="customers"
+    />
   );
 };
-const CargosTab = () => {
-  const [searchCriteria, setSearchCriteria] = useState<string>("");
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: format(addYears(new Date(), -1), "yyyy-MM-dd'T'HH:mm"),
-    to: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-  });
-  const [phoneSwitch, setPhoneSwitch] = useState<boolean>(false);
 
-  const downloadFile = async () => {
-    const apiUrl =
-      import.meta.env.VITE_BACKEND_API_URL +
-      `/api/reports/cargos?search=${searchCriteria.replace(
-        "+",
-        ""
-      )}&startDate=${dateRange.from}&endDate=${dateRange.to}`;
-    const headers = new Headers();
-    headers.append("Authorization", "Bearer " + localStorage.getItem("token")); // Add the Authorization header
+const CargosReportTab = () => {
+  const { t } = useTranslation();
+  const {
+    data,
+    columns,
+    currentPage,
+    perPage,
+    totalElements,
+    totalPages,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    setColumns,
+    setPageNo,
+    resetPageNo,
+    setPerPage,
+    setTotalElements,
+    setTotalPages,
+    setSearchCriteria,
+    setSortBy,
+    setOrder,
+    setFromDate,
+    setToDate,
+    put,
+  } = useCargoReportsStore();
 
-    try {
-      const response = await fetch(apiUrl, { method: "GET", headers });
+  const {
+    data: cargosPage,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useCargos(
+    currentPage,
+    perPage,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    "",
+    ""
+  );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch the file: ${response.status}`);
-      }
-
-      // Convert the response into a Blob and create a downloadable link
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = "CustomerReports.xlsx"; // Specify the file name
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error("Error downloading the file:", error);
+  useEffect(() => {
+    if (cargosPage) {
+      put(cargosPage);
+      setTotalPages(cargosPage.totalPages ?? 0);
+      setTotalElements(cargosPage.totalElements ?? 0);
     }
-  };
+  }, [cargosPage, put, setTotalElements, setTotalPages]);
+
+  useEffect(() => {
+    refetch();
+  }, [
+    currentPage,
+    perPage,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    refetch,
+  ]);
+
+  useEffect(() => {
+    setColumns([
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSortBy("createdAt");
+              setOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("createdAt")}</span>
+            {sortBy === "createdAt" ? (
+              order === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "createdAt",
+        cell: ({ row }) => <p>{row.original.createdAt}</p>,
+      },
+      {
+        header: t("sender"),
+        accessorKey: "sender",
+        cell: ({ row }) => (
+          <Link to={`/customers/${row.original.sender?.id}`} className="text-primary">
+            {row.original.sender?.firstName} {row.original.sender?.lastName}
+          </Link>
+        ),
+      },
+      {
+        header: t("receiver"),
+        accessorKey: "receiver",
+        cell: ({ row }) => (
+          <Link to={`/customers/${row.original.receiver?.id}`} className="text-primary">
+            {row.original.receiver?.firstName} {row.original.receiver?.lastName}
+          </Link>
+        ),
+      },
+      {
+        header: t("pickupLocation"),
+        accessorKey: "pickupLocation",
+        cell: ({ row }) => <p>{row.original.pickupLocation}</p>,
+      },
+      {
+        header: t("destination"),
+        accessorKey: "destination",
+        cell: ({ row }) => <p>{row.original.destination}</p>,
+      },
+      {
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSortBy("quantity");
+              setOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("quantity")}</span>
+            {sortBy === "quantity" ? (
+              order === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
+        accessorKey: "quantity",
+        cell: ({ row }) => <p>{row.original.quantity}</p>,
+      },
+      {
+        header: t("totalWeight"),
+        accessorKey: "totalWeight",
+        cell: ({ row }) => (
+          <p>{row.original.totalWeight ?? row.original.weight}</p>
+        ),
+      },
+    ]);
+  }, [t, setColumns, setSortBy, setOrder, sortBy, order]);
 
   return (
-    <form
-      onSubmit={(e) => e.preventDefault()}
-      className="flex md:flex-row flex-col justify-between gap-4 w-full my-2"
-    >
-      {" "}
-      <div className="flex-1 flex flex-col gap-4">
-        {!phoneSwitch ? (
-          <Input
-            className="h-10"
-            value={searchCriteria}
-            onChange={(event) => setSearchCriteria(event.target.value)}
-            onSubmitCapture={downloadFile}
-          />
-        ) : (
-          <PhoneInput
-            value={searchCriteria}
-            defaultCountry="SO"
-            onChange={(event) => setSearchCriteria(event)}
-            className=" rounded !m-0 !p-0"
-            onSubmitCapture={downloadFile}
-          />
-        )}
-        <div className="flex items-center gap-2">
-          <p className="text-xs">Search by phone</p>
-          <Switch checked={phoneSwitch} onCheckedChange={setPhoneSwitch} />
-        </div>
-      </div>
-      <div className="flex md:flex-row flex-col justify-evenly flex-1 gap-4">
-        <Input
-          className="h-10"
-          type="datetime-local"
-          value={dateRange.from! as string}
-          onChange={(e) =>
-            setDateRange((v) => ({
-              ...v,
-              from: e.target.value,
-            }))
-          }
-        />
-        <Input
-          className="h-10"
-          type="datetime-local"
-          value={dateRange.to! as string}
-          onChange={(e) =>
-            setDateRange((v) => ({
-              ...v,
-              to: e.target.value,
-            }))
-          }
-        />
-      </div>
-      <Button
-        variant={"secondary"}
-        className="h-10 shadow-none flex gap-x-3"
-        onClick={downloadFile}
-      >
-        <div>
-          <Scroll size={20} className="text-primary" />
-        </div>
-        <p>Download Excel</p>
-      </Button>
-    </form>
+    <DataTable
+      loading={isLoading}
+      refetching={isFetching}
+      columns={columns}
+      tableData={data?.content ?? []}
+      pagination={{
+        currentPage,
+        totalPages,
+        totalElements,
+        perPage,
+        order,
+        sortBy,
+      }}
+      setPerPage={setPerPage}
+      setSearchCriteria={setSearchCriteria}
+      setPageNo={setPageNo}
+      resetPageNo={resetPageNo}
+      setFromDate={setFromDate}
+      setToDate={setToDate}
+      report="cargos"
+    />
   );
 };
+
+const PickupRevenueReportTab = () => {
+  const { t } = useTranslation();
+  const {
+    data,
+    columns,
+    searchCriteria,
+    fromDate,
+    toDate,
+    setColumns,
+    setSearchCriteria,
+    setFromDate,
+    setToDate,
+    put,
+  } = usePickupRevenueReportStore();
+
+  const {
+    data: revenueRows,
+    isLoading,
+    isFetching,
+    refetch,
+  } = usePickupRevenueReport(fromDate, toDate, searchCriteria);
+
+  useEffect(() => {
+    if (revenueRows) {
+      put(revenueRows);
+    }
+  }, [revenueRows, put]);
+
+  useEffect(() => {
+    refetch();
+  }, [fromDate, toDate, searchCriteria, refetch]);
+
+  useEffect(() => {
+    setColumns([
+      {
+        header: t("pickupLocation"),
+        accessorKey: "pickupLocation",
+        cell: ({ row }) => <p>{row.original.pickupLocation}</p>,
+      },
+      {
+        header: t("totalRevenue"),
+        accessorKey: "totalRevenue",
+        cell: ({ row }) => <p>{row.original.totalRevenue.toFixed(2)}</p>,
+      },
+    ]);
+  }, [t, setColumns]);
+
+  return (
+    <DataTable
+      loading={isLoading}
+      refetching={isFetching}
+      columns={columns}
+      tableData={data ?? []}
+      pagination={{
+        currentPage: 0,
+        totalPages: 1,
+        totalElements: data?.length ?? 0,
+        perPage: data?.length ?? 0,
+        order: "asc",
+        sortBy: "pickupLocation",
+      }}
+      setPerPage={() => undefined}
+      setSearchCriteria={setSearchCriteria}
+      setPageNo={() => undefined}
+      resetPageNo={() => undefined}
+      setFromDate={setFromDate}
+      setToDate={setToDate}
+      paginationVisible={false}
+      report="cargos/pickup-city-revenue"
+    />
+  );
+};
+
+const CargoTypeDistributionTab = () => {
+  const { t } = useTranslation();
+  const {
+    data,
+    columns,
+    searchCriteria,
+    fromDate,
+    toDate,
+    setColumns,
+    setSearchCriteria,
+    setFromDate,
+    setToDate,
+    put,
+  } = useCargoTypeDistributionReportStore();
+
+  const {
+    data: typeRows,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useCargoTypeDistributionReport(fromDate, toDate, searchCriteria);
+
+  useEffect(() => {
+    if (typeRows) {
+      put(typeRows);
+    }
+  }, [typeRows, put]);
+
+  useEffect(() => {
+    refetch();
+  }, [fromDate, toDate, searchCriteria, refetch]);
+
+  useEffect(() => {
+    setColumns([
+      {
+        header: t("cargoType"),
+        accessorKey: "cargoType",
+        cell: ({ row }) => <p>{row.original.cargoType}</p>,
+      },
+      {
+        header: t("totalShipments"),
+        accessorKey: "totalShipments",
+        cell: ({ row }) => <p>{row.original.totalShipments}</p>,
+      },
+      {
+        header: t("totalRevenue"),
+        accessorKey: "totalRevenue",
+        cell: ({ row }) => <p>{row.original.totalRevenue.toFixed(2)}</p>,
+      },
+    ]);
+  }, [t, setColumns]);
+
+  return (
+    <DataTable
+      loading={isLoading}
+      refetching={isFetching}
+      columns={columns}
+      tableData={data ?? []}
+      pagination={{
+        currentPage: 0,
+        totalPages: 1,
+        totalElements: data?.length ?? 0,
+        perPage: data?.length ?? 0,
+        order: "asc",
+        sortBy: "cargoType",
+      }}
+      setPerPage={() => undefined}
+      setSearchCriteria={setSearchCriteria}
+      setPageNo={() => undefined}
+      resetPageNo={() => undefined}
+      setFromDate={setFromDate}
+      setToDate={setToDate}
+      paginationVisible={false}
+      report="cargos/type-distribution"
+    />
+  );
+};
+
+export default ReportsPage;

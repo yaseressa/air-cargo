@@ -17,6 +17,8 @@ import {
   NotificationResponseType,
   FxRatesResponseType,
   FXRate,
+  PickupCityRevenueReport,
+  CargoTypeSummaryReport,
 } from "./types";
 import { ColumnDef } from "@/components/data-table";
 import { create } from "zustand";
@@ -504,50 +506,231 @@ export const useForgotPasswordStore = create<ForgotPassword>((set) => ({
     set(() => ({ forgotPassword: { email: "", otp: "", validated: false } })),
 }));
 
-type CurrentCustomerCargoStoreProps = {
-  data?: Customer[];
-  put: (input?: Cargo[]) => void;
+type CustomerCargoTableStoreProps = {
+  data?: CargoResponseType;
+  columns: ColumnDef[];
+  currentPage: number;
+  perPage: number;
+  totalElements: number;
+  totalPages: number;
+  sortBy: string;
+  order: "asc" | "desc";
+  searchCriteria: string;
+  put: (input?: CargoResponseType) => void;
   clear: () => void;
-  deleteCargo: (id: string) => void;
-  addCargo: (cargo: Cargo) => void;
+  setPageNo: (pageNo: number) => void;
+  resetPageNo: () => void;
+  setPerPage: (perPage: number) => void;
+  setTotalElements: (totalElements: number) => void;
+  setTotalPages: (totalPages: number) => void;
+  setSearchCriteria: (criteria: string) => void;
+  setSortBy: (sortBy: string) => void;
+  setOrder: () => void;
+  setColumns: (columns: ColumnDef[]) => void;
 };
-export const useReceivedCargoStore = create<CurrentCustomerCargoStoreProps>(
-  (set) => ({
-    data: undefined,
-    put: (input?: Cargo[]) =>
-      set(() => ({
-        data: input,
-      })),
-    clear: () => set(() => ({ data: undefined })),
-    deleteCargo: (id: string) =>
-      set((state) => ({
-        data: state.data?.filter((cargo) => cargo.id !== id)!,
-      })),
-    addCargo: (cargo) =>
-      set((state) => ({
-        data: [cargo, ...state.data!],
-      })),
-  })
-);
 
-export const useSentCargoStore = create<CurrentCustomerCargoStoreProps>(
-  (set) => ({
+const createCustomerCargoTableStore = () =>
+  create<CustomerCargoTableStoreProps>((set) => ({
     data: undefined,
-    put: (input?: Cargo[]) =>
+    columns: [],
+    currentPage: 0,
+    perPage: 5,
+    totalElements: 0,
+    totalPages: 0,
+    sortBy: "createdAt",
+    order: "desc",
+    searchCriteria: "",
+    put: (input) =>
       set(() => ({
         data: input,
       })),
     clear: () => set(() => ({ data: undefined })),
-    deleteCargo: (id: string) =>
+    setPageNo: (pageNo) =>
+      set((state) => ({ currentPage: Math.max(state.currentPage + pageNo, 0) })),
+    resetPageNo: () => set(() => ({ currentPage: 0 })),
+    setPerPage: (perPage) => set(() => ({ perPage })),
+    setTotalElements: (totalElements) => set(() => ({ totalElements })),
+    setTotalPages: (totalPages) => set(() => ({ totalPages })),
+    setSearchCriteria: (criteria) => set(() => ({ searchCriteria: criteria })),
+    setSortBy: (sortBy) => set(() => ({ sortBy })),
+    setOrder: () =>
       set((state) => ({
-        data: state.data?.filter((cargo) => cargo.id !== id)!,
+        order: state.order === "asc" ? "desc" : "asc",
       })),
-    addCargo: (cargo) =>
-      set((state) => ({
-        data: [cargo, ...state.data!],
+    setColumns: (columns) =>
+      set(() => ({
+        columns,
       })),
-  })
-);
+  }));
+
+export const useCustomerSentCargoTableStore = createCustomerCargoTableStore();
+
+export const useCustomerReceivedCargoTableStore = createCustomerCargoTableStore();
+
+type CustomerReportStoreProps = {
+  data?: CustomersResponseType;
+  columns: ColumnDef[];
+  currentPage: number;
+  perPage: number;
+  totalElements: number;
+  totalPages: number;
+  sortBy: string;
+  order: "asc" | "desc";
+  searchCriteria: string;
+  fromDate: string;
+  toDate: string;
+  put: (input?: CustomersResponseType) => void;
+  clear: () => void;
+  setPageNo: (pageNo: number) => void;
+  resetPageNo: () => void;
+  setPerPage: (perPage: number) => void;
+  setTotalElements: (totalElements: number) => void;
+  setTotalPages: (totalPages: number) => void;
+  setSearchCriteria: (criteria: string) => void;
+  setSortBy: (sortBy: string) => void;
+  setOrder: () => void;
+  setFromDate: (date: string) => void;
+  setToDate: (date: string) => void;
+  setColumns: (columns: ColumnDef[]) => void;
+};
+
+export const useCustomerReportsStore = create<CustomerReportStoreProps>((set) => ({
+  data: undefined,
+  columns: [],
+  currentPage: 0,
+  perPage: 5,
+  totalElements: 0,
+  totalPages: 0,
+  sortBy: "createdAt",
+  order: "desc",
+  searchCriteria: "",
+  fromDate: "",
+  toDate: "",
+  put: (input) =>
+    set(() => ({
+      data: input,
+    })),
+  clear: () => set(() => ({ data: undefined })),
+  setPageNo: (pageNo) =>
+    set((state) => ({ currentPage: Math.max(state.currentPage + pageNo, 0) })),
+  resetPageNo: () => set(() => ({ currentPage: 0 })),
+  setPerPage: (perPage) => set(() => ({ perPage })),
+  setTotalElements: (totalElements) => set(() => ({ totalElements })),
+  setTotalPages: (totalPages) => set(() => ({ totalPages })),
+  setSearchCriteria: (criteria) => set(() => ({ searchCriteria: criteria })),
+  setSortBy: (sortBy) => set(() => ({ sortBy })),
+  setOrder: () =>
+    set((state) => ({ order: state.order === "asc" ? "desc" : "asc" })),
+  setFromDate: (date) => set(() => ({ fromDate: date })),
+  setToDate: (date) => set(() => ({ toDate: date })),
+  setColumns: (columns) =>
+    set(() => ({
+      columns,
+    })),
+}));
+
+type CargoReportStoreProps = {
+  data?: CargoResponseType;
+  columns: ColumnDef[];
+  currentPage: number;
+  perPage: number;
+  totalElements: number;
+  totalPages: number;
+  sortBy: string;
+  order: "asc" | "desc";
+  searchCriteria: string;
+  fromDate: string;
+  toDate: string;
+  put: (input?: CargoResponseType) => void;
+  clear: () => void;
+  setPageNo: (pageNo: number) => void;
+  resetPageNo: () => void;
+  setPerPage: (perPage: number) => void;
+  setTotalElements: (totalElements: number) => void;
+  setTotalPages: (totalPages: number) => void;
+  setSearchCriteria: (criteria: string) => void;
+  setSortBy: (sortBy: string) => void;
+  setOrder: () => void;
+  setFromDate: (date: string) => void;
+  setToDate: (date: string) => void;
+  setColumns: (columns: ColumnDef[]) => void;
+};
+
+export const useCargoReportsStore = create<CargoReportStoreProps>((set) => ({
+  data: undefined,
+  columns: [],
+  currentPage: 0,
+  perPage: 5,
+  totalElements: 0,
+  totalPages: 0,
+  sortBy: "createdAt",
+  order: "desc",
+  searchCriteria: "",
+  fromDate: "",
+  toDate: "",
+  put: (input) =>
+    set(() => ({
+      data: input,
+    })),
+  clear: () => set(() => ({ data: undefined })),
+  setPageNo: (pageNo) =>
+    set((state) => ({ currentPage: Math.max(state.currentPage + pageNo, 0) })),
+  resetPageNo: () => set(() => ({ currentPage: 0 })),
+  setPerPage: (perPage) => set(() => ({ perPage })),
+  setTotalElements: (totalElements) => set(() => ({ totalElements })),
+  setTotalPages: (totalPages) => set(() => ({ totalPages })),
+  setSearchCriteria: (criteria) => set(() => ({ searchCriteria: criteria })),
+  setSortBy: (sortBy) => set(() => ({ sortBy })),
+  setOrder: () =>
+    set((state) => ({ order: state.order === "asc" ? "desc" : "asc" })),
+  setFromDate: (date) => set(() => ({ fromDate: date })),
+  setToDate: (date) => set(() => ({ toDate: date })),
+  setColumns: (columns) =>
+    set(() => ({
+      columns,
+    })),
+}));
+
+type AggregateReportStoreProps<T> = {
+  data?: T[];
+  columns: ColumnDef[];
+  searchCriteria: string;
+  fromDate: string;
+  toDate: string;
+  put: (input?: T[]) => void;
+  clear: () => void;
+  setSearchCriteria: (criteria: string) => void;
+  setFromDate: (date: string) => void;
+  setToDate: (date: string) => void;
+  setColumns: (columns: ColumnDef[]) => void;
+};
+
+const createAggregateReportStore = <T,>() =>
+  create<AggregateReportStoreProps<T>>((set) => ({
+    data: undefined,
+    columns: [],
+    searchCriteria: "",
+    fromDate: "",
+    toDate: "",
+    put: (input) =>
+      set(() => ({
+        data: input,
+      })),
+    clear: () => set(() => ({ data: undefined })),
+    setSearchCriteria: (criteria) => set(() => ({ searchCriteria: criteria })),
+    setFromDate: (date) => set(() => ({ fromDate: date })),
+    setToDate: (date) => set(() => ({ toDate: date })),
+    setColumns: (columns) =>
+      set(() => ({
+        columns,
+      })),
+  }));
+
+export const usePickupRevenueReportStore =
+  createAggregateReportStore<PickupCityRevenueReport>();
+
+export const useCargoTypeDistributionReportStore =
+  createAggregateReportStore<CargoTypeSummaryReport>();
 
 type LocationStoreProps = {
   data?: Location[];

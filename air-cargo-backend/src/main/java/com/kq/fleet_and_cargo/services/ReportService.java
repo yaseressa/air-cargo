@@ -2,6 +2,8 @@ package com.kq.fleet_and_cargo.services;
 
 import com.kq.fleet_and_cargo.models.Cargo;
 import com.kq.fleet_and_cargo.models.Customer;
+import com.kq.fleet_and_cargo.payload.response.CargoTypeSummaryResponse;
+import com.kq.fleet_and_cargo.payload.response.PickupCityRevenueResponse;
 import com.kq.fleet_and_cargo.repositories.CargoRepository;
 import com.kq.fleet_and_cargo.repositories.CustomerRepository;
 import org.apache.poi.ss.usermodel.Row;
@@ -18,6 +20,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 public record ReportService(CargoRepository cargoRepository,
@@ -87,11 +91,60 @@ public record ReportService(CargoRepository cargoRepository,
             for (Object[] rowData : rows) {
                 Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(rowData[0] != null ? rowData[0].toString() : "Unknown");
-                row.createCell(1).setCellValue(rowData[1] != null ? Double.parseDouble(rowData[1].toString()) : 0.0);
+                row.createCell(1).setCellValue(rowData[1] != null ? ((Number) rowData[1]).doubleValue() : 0.0);
             }
             resizeColumns(sheet, columns.length);
             return writeWorkbookToByteArray(workbook);
         }
+    }
+
+    public List<PickupCityRevenueResponse> getPickupCityRevenuePreview(String search, String startDate, String endDate) {
+        DateRange range = resolveRange(startDate, endDate);
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+
+        return cargoRepository.findRevenueByPickupCity(range.start(), range.end()).stream()
+                .map(row -> new PickupCityRevenueResponse(
+                        row[0] != null ? row[0].toString() : "Unknown",
+                        row[1] != null ? ((Number) row[1]).doubleValue() : 0.0
+                ))
+                .filter(response -> normalizedSearch.isBlank() ||
+                        response.pickupLocation().toLowerCase(Locale.ROOT).contains(normalizedSearch))
+                .collect(Collectors.toList());
+    }
+
+    public synchronized byte[] generateCargoTypeDistributionReport(String startDate, String endDate) throws IOException {
+        DateRange range = resolveRange(startDate, endDate);
+        List<Object[]> rows = cargoRepository.findCargoTypeDistribution(range.start(), range.end());
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Cargo Type Distribution");
+            String[] columns = {"Cargo Type", "Total Shipments", "Total Revenue"};
+            createHeaderRow(sheet, columns);
+            int rowNum = 1;
+            for (Object[] rowData : rows) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(rowData[0] != null ? rowData[0].toString() : "Unknown");
+                row.createCell(1).setCellValue(rowData[1] != null ? ((Number) rowData[1]).longValue() : 0L);
+                row.createCell(2).setCellValue(rowData[2] != null ? ((Number) rowData[2]).doubleValue() : 0.0);
+            }
+            resizeColumns(sheet, columns.length);
+            return writeWorkbookToByteArray(workbook);
+        }
+    }
+
+    public List<CargoTypeSummaryResponse> getCargoTypeDistributionPreview(String search, String startDate, String endDate) {
+        DateRange range = resolveRange(startDate, endDate);
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+
+        return cargoRepository.findCargoTypeDistribution(range.start(), range.end()).stream()
+                .map(row -> new CargoTypeSummaryResponse(
+                        row[0] != null ? row[0].toString() : "Unknown",
+                        row[1] != null ? ((Number) row[1]).longValue() : 0L,
+                        row[2] != null ? ((Number) row[2]).doubleValue() : 0.0
+                ))
+                .filter(response -> normalizedSearch.isBlank() ||
+                        response.cargoType().toLowerCase(Locale.ROOT).contains(normalizedSearch))
+                .collect(Collectors.toList());
     }
 
     private void createHeaderRow(Sheet sheet, String[] columns) {
