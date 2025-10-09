@@ -50,8 +50,14 @@ public class SecurityConfiguration {
                         "/auth/toggle/**"
         };
 
-        private static final String[] ADMIN_OR_USER_ENDPOINTS = {
+        private static final String[] EXPENSE_ENDPOINTS = {
+                        "/api/expenses",
                         "/api/expenses/**",
+                        "/api/reports/expenses",
+                        "/api/reports/expenses/**"
+        };
+
+        private static final String[] ADMIN_OR_USER_ENDPOINTS = {
                         "/api/customers/**",
                         "/api/notifications/**",
                         "/api/analytics/**",
@@ -75,6 +81,8 @@ public class SecurityConfiguration {
                                                 .requestMatchers("/api/fx-rates/supported-currencies")
                                                 .hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers("/api/fx-rates/**").hasAuthority("ADMIN")
+                                                .requestMatchers(EXPENSE_ENDPOINTS)
+                                                .hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers(ADMIN_OR_USER_ENDPOINTS)
                                                 .hasAnyAuthority("ADMIN", "USER")
                                                 .anyRequest().authenticated())
