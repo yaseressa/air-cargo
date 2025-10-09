@@ -33,6 +33,18 @@ export interface Expense {
   receipt?: File;
   createdAt?: string;
 }
+
+export interface ExpenseCurrencySummary {
+  currencyCode: string;
+  totalAmount: number;
+  expenseCount: number;
+}
+
+export interface ExpenseMonthlyTrend {
+  period: string;
+  currencyCode: string;
+  totalAmount: number;
+}
 export type FXRate = {
   id?: string;
   sourceCurrency?: string;

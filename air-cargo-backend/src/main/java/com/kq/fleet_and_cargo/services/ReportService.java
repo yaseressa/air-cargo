@@ -2,10 +2,14 @@ package com.kq.fleet_and_cargo.services;
 
 import com.kq.fleet_and_cargo.models.Cargo;
 import com.kq.fleet_and_cargo.models.Customer;
+import com.kq.fleet_and_cargo.models.Expense;
 import com.kq.fleet_and_cargo.payload.response.CargoTypeSummaryResponse;
+import com.kq.fleet_and_cargo.payload.response.ExpenseCurrencySummaryResponse;
+import com.kq.fleet_and_cargo.payload.response.ExpenseMonthlyTrendResponse;
 import com.kq.fleet_and_cargo.payload.response.PickupCityRevenueResponse;
 import com.kq.fleet_and_cargo.repositories.CargoRepository;
 import com.kq.fleet_and_cargo.repositories.CustomerRepository;
+import com.kq.fleet_and_cargo.repositories.ExpenseRepository;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -19,13 +23,16 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.math.BigDecimal;
+import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
 public record ReportService(CargoRepository cargoRepository,
-                            CustomerRepository customerRepository) {
+                            CustomerRepository customerRepository,
+                            ExpenseRepository expenseRepository) {
 
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("Africa/Mogadishu");
     private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -145,6 +152,131 @@ public record ReportService(CargoRepository cargoRepository,
                 .filter(response -> normalizedSearch.isBlank() ||
                         response.cargoType().toLowerCase(Locale.ROOT).contains(normalizedSearch))
                 .collect(Collectors.toList());
+    }
+
+    public synchronized byte[] generateExpenseDetailedReport(String search, String startDate, String endDate) throws IOException {
+        DateRange range = resolveRange(startDate, endDate);
+        String normalizedSearch = normalizeSearch(search);
+        List<Expense> expenses = expenseRepository.findAllWithinRange(normalizedSearch, range.start(), range.end());
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Expenses");
+            String[] columns = {"Date", "Description", "Amount", "Currency", "Created At"};
+            createHeaderRow(sheet, columns);
+            int rowNum = 1;
+            for (Expense expense : expenses) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(formatDate(expense.getIncurredAt()));
+                row.createCell(1).setCellValue(nullSafe(expense.getDescription()));
+                row.createCell(2).setCellValue(expense.getAmount() != null ? expense.getAmount().getAmount().doubleValue() : 0.0);
+                row.createCell(3).setCellValue(expense.getAmount() != null ? expense.getAmount().getCurrencyCode() : "");
+                row.createCell(4).setCellValue(formatDate(expense.getCreatedAt()));
+            }
+            resizeColumns(sheet, columns.length);
+            return writeWorkbookToByteArray(workbook);
+        }
+    }
+
+    public List<ExpenseCurrencySummaryResponse> getExpenseCurrencySummary(String search, String startDate, String endDate) {
+        DateRange range = resolveRange(startDate, endDate);
+        String normalizedSearch = normalizeSearch(search);
+
+        return expenseRepository.summarizeByCurrency(normalizedSearch, range.start(), range.end()).stream()
+                .map(row -> new ExpenseCurrencySummaryResponse(
+                        (String) row[0],
+                        toBigDecimal(row[1]),
+                        ((Number) row[2]).longValue()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public synchronized byte[] generateExpenseCurrencySummaryReport(String search, String startDate, String endDate) throws IOException {
+        List<ExpenseCurrencySummaryResponse> summaries = getExpenseCurrencySummary(search, startDate, endDate);
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Expense Currency Summary");
+            String[] columns = {"Currency", "Total Amount", "Number of Expenses"};
+            createHeaderRow(sheet, columns);
+            int rowNum = 1;
+            for (ExpenseCurrencySummaryResponse summary : summaries) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(summary.currencyCode());
+                row.createCell(1).setCellValue(summary.totalAmount().doubleValue());
+                row.createCell(2).setCellValue(summary.expenseCount());
+            }
+            resizeColumns(sheet, columns.length);
+            return writeWorkbookToByteArray(workbook);
+        }
+    }
+
+    public List<ExpenseMonthlyTrendResponse> getExpenseMonthlyTrend(String search, String startDate, String endDate) {
+        DateRange range = resolveRange(startDate, endDate);
+        String normalizedSearch = normalizeSearch(search);
+
+        return expenseRepository.summarizeByMonth(normalizedSearch, range.start(), range.end()).stream()
+                .map(row -> new ExpenseMonthlyTrendResponse(
+                        formatPeriod(row[0]),
+                        (String) row[1],
+                        toBigDecimal(row[2])
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public synchronized byte[] generateExpenseMonthlyTrendReport(String search, String startDate, String endDate) throws IOException {
+        List<ExpenseMonthlyTrendResponse> trends = getExpenseMonthlyTrend(search, startDate, endDate);
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Expense Monthly Trend");
+            String[] columns = {"Period", "Currency", "Total Amount"};
+            createHeaderRow(sheet, columns);
+            int rowNum = 1;
+            for (ExpenseMonthlyTrendResponse trend : trends) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(trend.period());
+                row.createCell(1).setCellValue(trend.currencyCode());
+                row.createCell(2).setCellValue(trend.totalAmount().doubleValue());
+            }
+            resizeColumns(sheet, columns.length);
+            return writeWorkbookToByteArray(workbook);
+        }
+    }
+
+    private String normalizeSearch(String search) {
+        if (search == null || search.isBlank()) {
+            return null;
+        }
+        return search.trim();
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal;
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private String formatPeriod(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof ZonedDateTime zonedDateTime) {
+            return String.format(
+                    "%s %d",
+                    zonedDateTime.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
+                    zonedDateTime.getYear()
+            );
+        }
+        if (value instanceof LocalDateTime localDateTime) {
+            return String.format(
+                    "%s %d",
+                    localDateTime.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
+                    localDateTime.getYear()
+            );
+        }
+        return value.toString();
     }
 
     private void createHeaderRow(Sheet sheet, String[] columns) {

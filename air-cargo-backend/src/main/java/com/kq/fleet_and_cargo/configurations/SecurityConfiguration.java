@@ -29,7 +29,7 @@ public class SecurityConfiguration {
         private final JwtAuthFilter jwtAuthFilter;
         private final AuthenticationProvider authenticationProvider;
 
-        private static final String[] WHITE_LIST_URL = {
+        private static final String[] PUBLIC_ENDPOINTS = {
                         "/auth/**",
                         "/api-docs",
                         "/api-docs/**",
@@ -45,29 +45,37 @@ public class SecurityConfiguration {
                         "/api/cargos/file/*/preview"
         };
 
+        private static final String[] ADMIN_ONLY_ENDPOINTS = {
+                        "/api/users/**",
+                        "/auth/toggle/**"
+        };
+
+        private static final String[] ADMIN_OR_USER_ENDPOINTS = {
+                        "/api/expenses/**",
+                        "/api/customers/**",
+                        "/api/notifications/**",
+                        "/api/analytics/**",
+                        "/api/reports/**",
+                        "/api/cargos/**"
+        };
+
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http.cors(Customizer.withDefaults());
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .authorizeHttpRequests(req -> req
-                                                .requestMatchers(WHITE_LIST_URL).permitAll()
-                                                .requestMatchers("/api/users/**").hasAuthority("ADMIN")
+                                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                                 .requestMatchers("/api/files/**").permitAll()
-                                                .requestMatchers("/auth/toggle/**").hasAuthority("ADMIN")
+                                                .requestMatchers(ADMIN_ONLY_ENDPOINTS).hasAuthority("ADMIN")
                                                 .requestMatchers(HttpMethod.GET, "/api/locations/**")
                                                 .hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers("/api/locations/**").hasAuthority("ADMIN")
                                                 .requestMatchers("/api/fx-rates/supported-currencies")
                                                 .hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers("/api/fx-rates/**").hasAuthority("ADMIN")
-                                                .requestMatchers("/api/cargos/**").hasAnyAuthority("ADMIN", "USER")
-                                                .requestMatchers("/api/expenses/**").hasAnyAuthority("ADMIN", "USER")
-                                                .requestMatchers("/api/customers/**").hasAnyAuthority("ADMIN", "USER")
-                                                .requestMatchers("/api/notifications/**")
+                                                .requestMatchers(ADMIN_OR_USER_ENDPOINTS)
                                                 .hasAnyAuthority("ADMIN", "USER")
-                                                .requestMatchers("/api/analytics/**").hasAnyAuthority("ADMIN", "USER")
-                                                .requestMatchers("/api/reports/**").hasAnyAuthority("ADMIN", "USER")
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
                                 .authenticationProvider(authenticationProvider)

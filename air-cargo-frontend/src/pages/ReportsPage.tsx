@@ -1,61 +1,78 @@
 import DataTable from "@/components/data-table";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  useCargoTypeDistributionReport,
   useCargos,
   useCustomers,
-  useCargoTypeDistributionReport,
+  useExpenseCurrencySummaryReport,
+  useExpenseMonthlyTrendReport,
   usePickupRevenueReport,
 } from "@/services/calls/queries";
 import {
   useCargoReportsStore,
   useCargoTypeDistributionReportStore,
   useCustomerReportsStore,
+  useExpenseCurrencySummaryStore,
+  useExpenseMonthlyTrendStore,
   usePickupRevenueReportStore,
 } from "@/utils/store";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const ReportsPage = () => {
   const { t } = useTranslation();
 
+  const reportOptions = useMemo(
+    () => [
+      { value: "customers", label: t("customers"), component: <CustomersReportSection /> },
+      { value: "cargos", label: t("cargo"), component: <CargosReportSection /> },
+      { value: "pickupRevenue", label: t("pickupRevenue"), component: <PickupRevenueReportSection /> },
+      { value: "cargoTypes", label: t("cargoTypeDistribution"), component: <CargoTypeDistributionSection /> },
+      { value: "expenseCurrency", label: t("expenseCurrencyBreakdown"), component: <ExpenseCurrencySummarySection /> },
+      { value: "expenseTrend", label: t("expenseMonthlyTrend"), component: <ExpenseMonthlyTrendSection /> },
+    ],
+    [t]
+  );
+
+  const [selectedReport, setSelectedReport] = useState(reportOptions[0]?.value ?? "customers");
+
+  const activeReport = reportOptions.find((option) => option.value === selectedReport) ?? reportOptions[0];
+
   return (
     <>
       <Header />
-      <main className="flex flex-col justify-start items-stretch gap-4 m-2 p-4 sm:px-6 sm:py-0 md:gap-14 my-2">
-        <Tabs defaultValue="customers" className="w-full ">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 md:my-4 md:py-0 py-2 h-fit">
-            <TabsTrigger value="customers">{t("customers")}</TabsTrigger>
-            <TabsTrigger value="cargos">{t("cargo")}</TabsTrigger>
-            <TabsTrigger value="pickupRevenue">
-              {t("pickupRevenue")}
-            </TabsTrigger>
-            <TabsTrigger value="cargoTypes">
-              {t("cargoTypeDistribution")}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="customers">
-            <CustomersReportTab />
-          </TabsContent>
-          <TabsContent value="cargos">
-            <CargosReportTab />
-          </TabsContent>
-          <TabsContent value="pickupRevenue">
-            <PickupRevenueReportTab />
-          </TabsContent>
-          <TabsContent value="cargoTypes">
-            <CargoTypeDistributionTab />
-          </TabsContent>
-        </Tabs>
+      <main className="flex flex-col gap-6 m-2 p-4 sm:px-6 sm:py-0 md:gap-10">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold text-primary">{t("reports")}</h1>
+          <p className="text-sm text-muted-foreground">{t("selectReportSubtitle")}</p>
+        </div>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
+          <div className="md:w-72">
+            <Select value={selectedReport} onValueChange={setSelectedReport}>
+              <SelectTrigger aria-label={t("selectReport") ?? "Select report"}>
+                <SelectValue placeholder={t("selectReport") ?? ""} />
+              </SelectTrigger>
+              <SelectContent>
+                {reportOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="min-h-[400px]">{activeReport?.component}</div>
       </main>
     </>
   );
 };
 
-const CustomersReportTab = () => {
+const CustomersReportSection = () => {
   const { t } = useTranslation();
   const {
     data,
@@ -83,12 +100,7 @@ const CustomersReportTab = () => {
     put,
   } = useCustomerReportsStore();
 
-  const {
-    data: customersPage,
-    isLoading,
-    isFetching,
-    refetch,
-  } = useCustomers(
+  const { data: customersPage, isLoading, isFetching, refetch } = useCustomers(
     currentPage,
     perPage,
     sortBy,
@@ -108,16 +120,7 @@ const CustomersReportTab = () => {
 
   useEffect(() => {
     refetch();
-  }, [
-    currentPage,
-    perPage,
-    sortBy,
-    order,
-    searchCriteria,
-    fromDate,
-    toDate,
-    refetch,
-  ]);
+  }, [currentPage, perPage, sortBy, order, searchCriteria, fromDate, toDate, refetch]);
 
   useEffect(() => {
     setColumns([
@@ -156,7 +159,27 @@ const CustomersReportTab = () => {
         ),
       },
       {
-        header: t("phoneNumber"),
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSortBy("phoneNumber");
+              setOrder();
+            }}
+            className="flex items-center gap-2"
+          >
+            <span>{t("phoneNumber")}</span>
+            {sortBy === "phoneNumber" ? (
+              order === "asc" ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUp className="h-3 w-3" />
+              )
+            ) : (
+              <ArrowUpDown className="h-3 w-3" />
+            )}
+          </Button>
+        ),
         accessorKey: "phoneNumber",
         cell: ({ row }) => <p>{row.original.phoneNumber}</p>,
       },
@@ -193,7 +216,7 @@ const CustomersReportTab = () => {
   );
 };
 
-const CargosReportTab = () => {
+const CargosReportSection = () => {
   const { t } = useTranslation();
   const {
     data,
@@ -221,12 +244,7 @@ const CargosReportTab = () => {
     put,
   } = useCargoReportsStore();
 
-  const {
-    data: cargosPage,
-    isLoading,
-    isFetching,
-    refetch,
-  } = useCargos(
+  const { data: cargosPage, isLoading, isFetching, refetch } = useCargos(
     currentPage,
     perPage,
     sortBy,
@@ -248,16 +266,7 @@ const CargosReportTab = () => {
 
   useEffect(() => {
     refetch();
-  }, [
-    currentPage,
-    perPage,
-    sortBy,
-    order,
-    searchCriteria,
-    fromDate,
-    toDate,
-    refetch,
-  ]);
+  }, [currentPage, perPage, sortBy, order, searchCriteria, fromDate, toDate, refetch]);
 
   useEffect(() => {
     setColumns([
@@ -290,10 +299,7 @@ const CargosReportTab = () => {
         header: t("sender"),
         accessorKey: "sender",
         cell: ({ row }) => (
-          <Link
-            to={`/customers/${row.original.sender?.id}`}
-            className="text-primary"
-          >
+          <Link to={`/customers/${row.original.sender?.id}`} className="text-primary">
             {row.original.sender?.firstName} {row.original.sender?.lastName}
           </Link>
         ),
@@ -302,10 +308,7 @@ const CargosReportTab = () => {
         header: t("receiver"),
         accessorKey: "receiver",
         cell: ({ row }) => (
-          <Link
-            to={`/customers/${row.original.receiver?.id}`}
-            className="text-primary"
-          >
+          <Link to={`/customers/${row.original.receiver?.id}`} className="text-primary">
             {row.original.receiver?.firstName} {row.original.receiver?.lastName}
           </Link>
         ),
@@ -348,9 +351,7 @@ const CargosReportTab = () => {
       {
         header: t("totalWeight"),
         accessorKey: "totalWeight",
-        cell: ({ row }) => (
-          <p>{row.original.totalWeight ?? row.original.weight}</p>
-        ),
+        cell: ({ row }) => <p>{row.original.totalWeight ?? row.original.weight}</p>,
       },
     ]);
   }, [t, setColumns, setSortBy, setOrder, sortBy, order]);
@@ -380,7 +381,7 @@ const CargosReportTab = () => {
   );
 };
 
-const PickupRevenueReportTab = () => {
+const PickupRevenueReportSection = () => {
   const { t } = useTranslation();
   const {
     data,
@@ -395,22 +396,17 @@ const PickupRevenueReportTab = () => {
     put,
   } = usePickupRevenueReportStore();
 
-  const {
-    data: revenueRows,
-    isLoading,
-    isFetching,
-    refetch,
-  } = usePickupRevenueReport(fromDate, toDate, searchCriteria);
+  const { data: revenueRows, isLoading, isFetching } = usePickupRevenueReport(
+    fromDate,
+    toDate,
+    searchCriteria
+  );
 
   useEffect(() => {
     if (revenueRows) {
       put(revenueRows);
     }
   }, [revenueRows, put]);
-
-  useEffect(() => {
-    refetch();
-  }, [fromDate, toDate, searchCriteria, refetch]);
 
   useEffect(() => {
     setColumns([
@@ -422,7 +418,14 @@ const PickupRevenueReportTab = () => {
       {
         header: t("totalRevenue"),
         accessorKey: "totalRevenue",
-        cell: ({ row }) => <p>{row.original.totalRevenue.toFixed(2)}</p>,
+        cell: ({ row }) => (
+          <p>
+            {new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: "USD",
+            }).format(row.original.totalRevenue ?? 0)}
+          </p>
+        ),
       },
     ]);
   }, [t, setColumns]);
@@ -433,27 +436,18 @@ const PickupRevenueReportTab = () => {
       refetching={isFetching}
       columns={columns}
       tableData={data ?? []}
-      pagination={{
-        currentPage: 0,
-        totalPages: 1,
-        totalElements: data?.length ?? 0,
-        perPage: data?.length ?? 0,
-        order: "asc",
-        sortBy: "pickupLocation",
-      }}
-      setPerPage={() => undefined}
       setSearchCriteria={setSearchCriteria}
-      setPageNo={() => undefined}
-      resetPageNo={() => undefined}
       setFromDate={setFromDate}
       setToDate={setToDate}
+      searchCriteria={searchCriteria}
+      headerShown
       paginationVisible={false}
       report="cargos/pickup-city-revenue"
     />
   );
 };
 
-const CargoTypeDistributionTab = () => {
+const CargoTypeDistributionSection = () => {
   const { t } = useTranslation();
   const {
     data,
@@ -468,22 +462,17 @@ const CargoTypeDistributionTab = () => {
     put,
   } = useCargoTypeDistributionReportStore();
 
-  const {
-    data: typeRows,
-    isLoading,
-    isFetching,
-    refetch,
-  } = useCargoTypeDistributionReport(fromDate, toDate, searchCriteria);
+  const { data: distributionRows, isLoading, isFetching } = useCargoTypeDistributionReport(
+    fromDate,
+    toDate,
+    searchCriteria
+  );
 
   useEffect(() => {
-    if (typeRows) {
-      put(typeRows);
+    if (distributionRows) {
+      put(distributionRows);
     }
-  }, [typeRows, put]);
-
-  useEffect(() => {
-    refetch();
-  }, [fromDate, toDate, searchCriteria, refetch]);
+  }, [distributionRows, put]);
 
   useEffect(() => {
     setColumns([
@@ -500,7 +489,14 @@ const CargoTypeDistributionTab = () => {
       {
         header: t("totalRevenue"),
         accessorKey: "totalRevenue",
-        cell: ({ row }) => <p>{row.original.totalRevenue.toFixed(2)}</p>,
+        cell: ({ row }) => (
+          <p>
+            {new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: "USD",
+            }).format(row.original.totalRevenue ?? 0)}
+          </p>
+        ),
       },
     ]);
   }, [t, setColumns]);
@@ -511,22 +507,157 @@ const CargoTypeDistributionTab = () => {
       refetching={isFetching}
       columns={columns}
       tableData={data ?? []}
-      pagination={{
-        currentPage: 0,
-        totalPages: 1,
-        totalElements: data?.length ?? 0,
-        perPage: data?.length ?? 0,
-        order: "asc",
-        sortBy: "cargoType",
-      }}
-      setPerPage={() => undefined}
       setSearchCriteria={setSearchCriteria}
-      setPageNo={() => undefined}
-      resetPageNo={() => undefined}
       setFromDate={setFromDate}
       setToDate={setToDate}
+      searchCriteria={searchCriteria}
+      headerShown
       paginationVisible={false}
       report="cargos/type-distribution"
+    />
+  );
+};
+
+const ExpenseCurrencySummarySection = () => {
+  const { t } = useTranslation();
+  const {
+    data,
+    columns,
+    searchCriteria,
+    fromDate,
+    toDate,
+    setColumns,
+    setSearchCriteria,
+    setFromDate,
+    setToDate,
+    put,
+  } = useExpenseCurrencySummaryStore();
+
+  const { data: summaryRows, isLoading, isFetching } = useExpenseCurrencySummaryReport(
+    fromDate,
+    toDate,
+    searchCriteria
+  );
+
+  useEffect(() => {
+    if (summaryRows) {
+      put(summaryRows);
+    }
+  }, [summaryRows, put]);
+
+  useEffect(() => {
+    setColumns([
+      {
+        header: t("expenseCurrency"),
+        accessorKey: "currencyCode",
+        cell: ({ row }) => <p className="uppercase font-medium">{row.original.currencyCode}</p>,
+      },
+      {
+        header: t("totalAmount"),
+        accessorKey: "totalAmount",
+        cell: ({ row }) => (
+          <p>
+            {new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: row.original.currencyCode ?? "USD",
+            }).format(row.original.totalAmount ?? 0)}
+          </p>
+        ),
+      },
+      {
+        header: t("expenseEntries"),
+        accessorKey: "expenseCount",
+        cell: ({ row }) => <p>{row.original.expenseCount}</p>,
+      },
+    ]);
+  }, [t, setColumns]);
+
+  return (
+    <DataTable
+      loading={isLoading}
+      refetching={isFetching}
+      columns={columns}
+      tableData={data ?? []}
+      setSearchCriteria={setSearchCriteria}
+      setFromDate={setFromDate}
+      setToDate={setToDate}
+      searchCriteria={searchCriteria}
+      headerShown
+      paginationVisible={false}
+      columnsShown={false}
+      report="expenses/currency-breakdown"
+    />
+  );
+};
+
+const ExpenseMonthlyTrendSection = () => {
+  const { t } = useTranslation();
+  const {
+    data,
+    columns,
+    searchCriteria,
+    fromDate,
+    toDate,
+    setColumns,
+    setSearchCriteria,
+    setFromDate,
+    setToDate,
+    put,
+  } = useExpenseMonthlyTrendStore();
+
+  const { data: trendRows, isLoading, isFetching } = useExpenseMonthlyTrendReport(
+    fromDate,
+    toDate,
+    searchCriteria
+  );
+
+  useEffect(() => {
+    if (trendRows) {
+      put(trendRows);
+    }
+  }, [trendRows, put]);
+
+  useEffect(() => {
+    setColumns([
+      {
+        header: t("period"),
+        accessorKey: "period",
+        cell: ({ row }) => <p>{row.original.period}</p>,
+      },
+      {
+        header: t("expenseCurrency"),
+        accessorKey: "currencyCode",
+        cell: ({ row }) => <p className="uppercase font-medium">{row.original.currencyCode}</p>,
+      },
+      {
+        header: t("totalAmount"),
+        accessorKey: "totalAmount",
+        cell: ({ row }) => (
+          <p>
+            {new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: row.original.currencyCode ?? "USD",
+            }).format(row.original.totalAmount ?? 0)}
+          </p>
+        ),
+      },
+    ]);
+  }, [t, setColumns]);
+
+  return (
+    <DataTable
+      loading={isLoading}
+      refetching={isFetching}
+      columns={columns}
+      tableData={data ?? []}
+      setSearchCriteria={setSearchCriteria}
+      setFromDate={setFromDate}
+      setToDate={setToDate}
+      searchCriteria={searchCriteria}
+      headerShown
+      paginationVisible={false}
+      columnsShown={false}
+      report="expenses/monthly-trend"
     />
   );
 };
