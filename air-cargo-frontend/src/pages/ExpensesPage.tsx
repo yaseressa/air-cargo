@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
-import { ExternalLink, FilePlus2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useQueryClient } from "react-query";
 import { useTranslation } from "react-i18next";
 
@@ -17,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -275,111 +274,103 @@ const ExpensesPage = () => {
               </Card>
             )}
           </div>
-          <div>
-            <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <FilePlus2 className="h-4 w-4" />
-                  {t("addExpense")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>{t("addExpense")}</DialogTitle>
-                  <DialogDescription>{t("recordNewExpenseDescription")}</DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                  <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+          <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{t("addExpense")}</DialogTitle>
+                <DialogDescription>{t("recordNewExpenseDescription")}</DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("expenseDescription")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t("expenseDescriptionPlaceholder")} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="description"
+                      name="amount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("expenseDescription")}</FormLabel>
+                          <FormLabel>{t("expenseAmount")}</FormLabel>
                           <FormControl>
-                            <Input placeholder={t("expenseDescriptionPlaceholder")} {...field} />
+                            <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="amount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("expenseAmount")}</FormLabel>
+                    <FormField
+                      control={form.control}
+                      name="currencyCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("expenseCurrency")}</FormLabel>
+                          <Select
+                            disabled={loadingCurrencies}
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
                             <FormControl>
-                              <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                              <SelectTrigger>
+                                <SelectValue placeholder={t("selectCurrency")} />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="currencyCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("expenseCurrency")}</FormLabel>
-                            <Select
-                              disabled={loadingCurrencies}
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t("selectCurrency")} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {supportedCurrencies?.map((currency) => (
-                                  <SelectItem key={currency} value={currency} className="uppercase">
-                                    {currency}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="incurredAt"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("expenseDate")}</FormLabel>
-                          <FormControl>
-                            <Input type="date" max={today} {...field} />
-                          </FormControl>
+                            <SelectContent>
+                              {supportedCurrencies?.map((currency) => (
+                                <SelectItem key={currency} value={currency} className="uppercase">
+                                  {currency}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <div className="space-y-2">
-                      <FormLabel>{t("expenseReceipt")}</FormLabel>
-                      <Input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          setReceiptFile(file ?? undefined);
-                        }}
-                      />
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit" disabled={isCreating}>
-                        {isCreating ? t("saving") : t("save")}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="incurredAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("expenseDate")}</FormLabel>
+                        <FormControl>
+                          <Input type="date" max={today} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="space-y-2">
+                    <FormLabel>{t("expenseReceipt")}</FormLabel>
+                    <Input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        setReceiptFile(file ?? undefined);
+                      }}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={isCreating}>
+                      {isCreating ? t("saving") : t("save")}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
         <DataTable
           loading={isLoading}
@@ -394,6 +385,7 @@ const ExpensesPage = () => {
           paginationVisible={false}
           columnsShown={false}
           report="expenses"
+          onCreateClick={() => handleDialogChange(true)}
         />
       </main>
     </>
