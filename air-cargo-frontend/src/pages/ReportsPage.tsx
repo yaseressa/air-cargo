@@ -1,7 +1,13 @@
 import DataTable from "@/components/data-table";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   useCargoTypeDistributionReport,
   useCargos,
@@ -28,29 +34,53 @@ const ReportsPage = () => {
 
   const reportOptions = useMemo(
     () => [
-      { value: "customers", label: t("customers"), component: <CustomersReportSection /> },
-      { value: "cargos", label: t("cargo"), component: <CargosReportSection /> },
-      { value: "pickupRevenue", label: t("pickupRevenue"), component: <PickupRevenueReportSection /> },
-      { value: "cargoTypes", label: t("cargoTypeDistribution"), component: <CargoTypeDistributionSection /> },
-      { value: "expenseCurrency", label: t("expenseCurrencyBreakdown"), component: <ExpenseCurrencySummarySection /> },
-      { value: "expenseTrend", label: t("expenseMonthlyTrend"), component: <ExpenseMonthlyTrendSection /> },
+      {
+        value: "customers",
+        label: t("customers"),
+        component: <CustomersReportSection />,
+      },
+      {
+        value: "cargos",
+        label: t("cargo"),
+        component: <CargosReportSection />,
+      },
+      {
+        value: "pickupRevenue",
+        label: t("pickupRevenue"),
+        component: <PickupRevenueReportSection />,
+      },
+      {
+        value: "cargoTypes",
+        label: t("cargoTypeDistribution"),
+        component: <CargoTypeDistributionSection />,
+      },
+      {
+        value: "expenseCurrency",
+        label: t("expenseCurrencyBreakdown"),
+        component: <ExpenseCurrencySummarySection />,
+      },
+      {
+        value: "expenseTrend",
+        label: t("expenseMonthlyTrend"),
+        component: <ExpenseMonthlyTrendSection />,
+      },
     ],
     [t]
   );
 
-  const [selectedReport, setSelectedReport] = useState(reportOptions[0]?.value ?? "customers");
+  const [selectedReport, setSelectedReport] = useState(
+    reportOptions[0]?.value ?? "customers"
+  );
 
-  const activeReport = reportOptions.find((option) => option.value === selectedReport) ?? reportOptions[0];
+  const activeReport =
+    reportOptions.find((option) => option.value === selectedReport) ??
+    reportOptions[0];
 
   return (
     <>
       <Header />
-      <main className="flex flex-col gap-6 m-2 p-4 sm:px-6 sm:py-0 md:gap-10">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold text-primary">{t("reports")}</h1>
-          <p className="text-sm text-muted-foreground">{t("selectReportSubtitle")}</p>
-        </div>
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
+      <main className="flex flex-col gap-6 m-2 sm:py-0 md:gap-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center ">
           <div className="md:w-72">
             <Select value={selectedReport} onValueChange={setSelectedReport}>
               <SelectTrigger aria-label={t("selectReport") ?? "Select report"}>
@@ -100,7 +130,12 @@ const CustomersReportSection = () => {
     put,
   } = useCustomerReportsStore();
 
-  const { data: customersPage, isLoading, isFetching, refetch } = useCustomers(
+  const {
+    data: customersPage,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useCustomers(
     currentPage,
     perPage,
     sortBy,
@@ -120,7 +155,16 @@ const CustomersReportSection = () => {
 
   useEffect(() => {
     refetch();
-  }, [currentPage, perPage, sortBy, order, searchCriteria, fromDate, toDate, refetch]);
+  }, [
+    currentPage,
+    perPage,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    refetch,
+  ]);
 
   useEffect(() => {
     setColumns([
@@ -244,7 +288,12 @@ const CargosReportSection = () => {
     put,
   } = useCargoReportsStore();
 
-  const { data: cargosPage, isLoading, isFetching, refetch } = useCargos(
+  const {
+    data: cargosPage,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useCargos(
     currentPage,
     perPage,
     sortBy,
@@ -266,7 +315,16 @@ const CargosReportSection = () => {
 
   useEffect(() => {
     refetch();
-  }, [currentPage, perPage, sortBy, order, searchCriteria, fromDate, toDate, refetch]);
+  }, [
+    currentPage,
+    perPage,
+    sortBy,
+    order,
+    searchCriteria,
+    fromDate,
+    toDate,
+    refetch,
+  ]);
 
   useEffect(() => {
     setColumns([
@@ -299,7 +357,10 @@ const CargosReportSection = () => {
         header: t("sender"),
         accessorKey: "sender",
         cell: ({ row }) => (
-          <Link to={`/customers/${row.original.sender?.id}`} className="text-primary">
+          <Link
+            to={`/customers/${row.original.sender?.id}`}
+            className="text-primary"
+          >
             {row.original.sender?.firstName} {row.original.sender?.lastName}
           </Link>
         ),
@@ -308,7 +369,10 @@ const CargosReportSection = () => {
         header: t("receiver"),
         accessorKey: "receiver",
         cell: ({ row }) => (
-          <Link to={`/customers/${row.original.receiver?.id}`} className="text-primary">
+          <Link
+            to={`/customers/${row.original.receiver?.id}`}
+            className="text-primary"
+          >
             {row.original.receiver?.firstName} {row.original.receiver?.lastName}
           </Link>
         ),
@@ -351,7 +415,9 @@ const CargosReportSection = () => {
       {
         header: t("totalWeight"),
         accessorKey: "totalWeight",
-        cell: ({ row }) => <p>{row.original.totalWeight ?? row.original.weight}</p>,
+        cell: ({ row }) => (
+          <p>{row.original.totalWeight ?? row.original.weight}</p>
+        ),
       },
     ]);
   }, [t, setColumns, setSortBy, setOrder, sortBy, order]);
@@ -396,11 +462,11 @@ const PickupRevenueReportSection = () => {
     put,
   } = usePickupRevenueReportStore();
 
-  const { data: revenueRows, isLoading, isFetching } = usePickupRevenueReport(
-    fromDate,
-    toDate,
-    searchCriteria
-  );
+  const {
+    data: revenueRows,
+    isLoading,
+    isFetching,
+  } = usePickupRevenueReport(fromDate, toDate, searchCriteria);
 
   useEffect(() => {
     if (revenueRows) {
@@ -462,11 +528,11 @@ const CargoTypeDistributionSection = () => {
     put,
   } = useCargoTypeDistributionReportStore();
 
-  const { data: distributionRows, isLoading, isFetching } = useCargoTypeDistributionReport(
-    fromDate,
-    toDate,
-    searchCriteria
-  );
+  const {
+    data: distributionRows,
+    isLoading,
+    isFetching,
+  } = useCargoTypeDistributionReport(fromDate, toDate, searchCriteria);
 
   useEffect(() => {
     if (distributionRows) {
@@ -533,11 +599,11 @@ const ExpenseCurrencySummarySection = () => {
     put,
   } = useExpenseCurrencySummaryStore();
 
-  const { data: summaryRows, isLoading, isFetching } = useExpenseCurrencySummaryReport(
-    fromDate,
-    toDate,
-    searchCriteria
-  );
+  const {
+    data: summaryRows,
+    isLoading,
+    isFetching,
+  } = useExpenseCurrencySummaryReport(fromDate, toDate, searchCriteria);
 
   useEffect(() => {
     if (summaryRows) {
@@ -550,7 +616,9 @@ const ExpenseCurrencySummarySection = () => {
       {
         header: t("expenseCurrency"),
         accessorKey: "currencyCode",
-        cell: ({ row }) => <p className="uppercase font-medium">{row.original.currencyCode}</p>,
+        cell: ({ row }) => (
+          <p className="uppercase font-medium">{row.original.currencyCode}</p>
+        ),
       },
       {
         header: t("totalAmount"),
@@ -605,11 +673,11 @@ const ExpenseMonthlyTrendSection = () => {
     put,
   } = useExpenseMonthlyTrendStore();
 
-  const { data: trendRows, isLoading, isFetching } = useExpenseMonthlyTrendReport(
-    fromDate,
-    toDate,
-    searchCriteria
-  );
+  const {
+    data: trendRows,
+    isLoading,
+    isFetching,
+  } = useExpenseMonthlyTrendReport(fromDate, toDate, searchCriteria);
 
   useEffect(() => {
     if (trendRows) {
@@ -627,7 +695,9 @@ const ExpenseMonthlyTrendSection = () => {
       {
         header: t("expenseCurrency"),
         accessorKey: "currencyCode",
-        cell: ({ row }) => <p className="uppercase font-medium">{row.original.currencyCode}</p>,
+        cell: ({ row }) => (
+          <p className="uppercase font-medium">{row.original.currencyCode}</p>
+        ),
       },
       {
         header: t("totalAmount"),
