@@ -50,12 +50,12 @@ export const isEmpty = (str: string) => {
 
 export const buildFileUrl = (fileUrl?: string) => {
   if (!fileUrl) return "";
-  const base = (import.meta.env.VITE_BACKEND_API_URL || "").replace(/\/$/, "");
+  const base = import.meta.env.VITE_BACKEND_API_URL || "";
 
   if (!base) {
     return fileUrl;
   }
 
   const encoded = encodeURIComponent(fileUrl);
-  return `${base}/files/view?url=${encoded}`;
+  return `${base}/api/files/view?url=${encoded}`;
 };

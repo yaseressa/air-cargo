@@ -10,9 +10,14 @@ const SecureImage = ({
   fileName: string;
   className?: string;
 }) => {
+  console.log(
+    import.meta.env.VITE_BACKEND_API_URL + "/api/files/view?url=" + fileURL
+  );
   return (
     <img
-      src={buildFileUrl(fileURL)}
+      src={buildFileUrl(
+        import.meta.env.VITE_BACKEND_API_URL + "/api/files/view?url=" + fileURL
+      )}
       alt={fileName}
       className={cn("object-cover w-full h-full", className)}
     />

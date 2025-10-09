@@ -183,12 +183,6 @@ export default () => {
 
   const trackingHistory = useCargoTrackingInformation(cargo.cargo?.id);
 
-  useEffect(() => {
-    if (selectedCargoTab === "expenses") {
-      setSelectedCargoTab("general");
-    }
-  }, [selectedCargoTab, setSelectedCargoTab]);
-
   const { mutate: deleteCargo } = useDeleteCargo();
   const [
     { data: cargoData, isLoading: isCargoLoading, isError: isCargoError },
@@ -217,7 +211,7 @@ export default () => {
       cargoTrackingStore.resetCargoTracking();
       cargo.resetCargo();
     };
-  }, [cargoId, cargoTrackingStore, cargo, setCreateMode, setSelectedCargoTab]);
+  }, [cargoId, setCreateMode]);
 
   useEffect(() => {
     if (trackingHistory.data) {
