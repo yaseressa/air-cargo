@@ -7,8 +7,6 @@ import java.util.zip.DataFormatException;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,26 +16,21 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.kq.fleet_and_cargo.models.Cargo;
-import com.kq.fleet_and_cargo.models.CargoExpense;
 import com.kq.fleet_and_cargo.models.CargoTrackingHistory;
 import com.kq.fleet_and_cargo.models.File;
 import com.kq.fleet_and_cargo.payload.dto.CargoDto;
-import com.kq.fleet_and_cargo.payload.request.CargoExpenseRequest;
 import com.kq.fleet_and_cargo.payload.request.PublicCargoTrackingRequest;
-import com.kq.fleet_and_cargo.services.CargoExpenseService;
 import com.kq.fleet_and_cargo.services.CargoService;
 import com.kq.fleet_and_cargo.services.CargoTrackingHistoryService;
 
 @RestController
 @RequestMapping("/api/cargos")
 public record CargoController(CargoService cargoService, ModelMapper modelMapper,
-        CargoTrackingHistoryService cargoTrackingHistoryService,
-        CargoExpenseService cargoExpenseService) {
+        CargoTrackingHistoryService cargoTrackingHistoryService) {
     @GetMapping
     public ResponseEntity<Page<CargoDto>> getCargos(@RequestParam int page, @RequestParam int size,
             @RequestParam(required = false, defaultValue = "") String search,
@@ -97,21 +90,6 @@ public record CargoController(CargoService cargoService, ModelMapper modelMapper
     public ResponseEntity<List<File>> getFiles(@PathVariable("cargoId") String id)
             throws DataFormatException, IOException {
         return ResponseEntity.ok(cargoService.getFiles(id));
-    }
-
-    @GetMapping("/{cargoId}/expenses")
-    public ResponseEntity<List<CargoExpense>> getExpenses(@PathVariable("cargoId") String id) {
-        return ResponseEntity.ok(cargoExpenseService.list(id));
-    }
-
-    @PostMapping(value = "/{cargoId}/expenses", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CargoExpense> createExpense(
-            @PathVariable("cargoId") String id,
-            @RequestPart("expense") CargoExpenseRequest request,
-            @RequestPart(value = "file", required = false) MultipartFile file
-    ) throws IOException {
-        CargoExpense expense = cargoExpenseService.create(id, request, file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(expense);
     }
 
     @GetMapping("/send-cargo-info/{cargoId}")

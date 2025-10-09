@@ -25,7 +25,7 @@ export interface Cargo {
   referenceNumber?: number;
 }
 
-export interface CargoExpense {
+export interface Expense {
   id?: string;
   description?: string;
   amount?: Money;

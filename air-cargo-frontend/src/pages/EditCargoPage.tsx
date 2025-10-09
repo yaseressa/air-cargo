@@ -1,5 +1,4 @@
 import { CargoForm } from "@/components/cargo-form";
-import CargoExpensesSection from "@/components/cargo-expenses-section";
 import Header from "@/components/header";
 import DialogWrapper from "@/components/re/dialog";
 import SecureImage from "@/components/secure-image";
@@ -173,8 +172,9 @@ export default () => {
   const photosStore = useFilesStore();
   const [whatsId, setWhatsId] = useState<string | null>(null);
   const sendWhatsapp = useSendCargoInformation(whatsId!);
-  const toggle = useToggleCreateStore();
-  const tab = useSelectedCargoTabStore();
+  const createMode = useToggleCreateStore((state) => state.create);
+  const setCreateMode = useToggleCreateStore((state) => state.setCreate);
+  const { selectedCargoTab, setSelectedCargoTab } = useSelectedCargoTabStore();
   const [verifyName, setVerifyName] = useState("");
   const cargoTrackingStore = useSelectedCargoTrackingStore();
   const modalNumber = useModalNumber();
@@ -182,6 +182,12 @@ export default () => {
   const cargo = useSelectedCargoStore();
 
   const trackingHistory = useCargoTrackingInformation(cargo.cargo?.id);
+
+  useEffect(() => {
+    if (selectedCargoTab === "expenses") {
+      setSelectedCargoTab("general");
+    }
+  }, [selectedCargoTab, setSelectedCargoTab]);
 
   const { mutate: deleteCargo } = useDeleteCargo();
   const [
@@ -205,13 +211,13 @@ export default () => {
   }, [isCargoLoading]);
 
   useEffect(() => {
-    toggle.setCreate(cargoId === "create");
+    setCreateMode(cargoId === "create");
     return () => {
-      tab.setSelectedCargoTab("general");
+      setSelectedCargoTab("general");
       cargoTrackingStore.resetCargoTracking();
       cargo.resetCargo();
     };
-  }, []);
+  }, [cargoId, cargoTrackingStore, cargo, setCreateMode, setSelectedCargoTab]);
 
   useEffect(() => {
     if (trackingHistory.data) {
@@ -248,19 +254,16 @@ export default () => {
       <Header />
       <main className="flex flex-col gap-4 md:gap-2 m-2">
         <Tabs
-          onValueChange={tab.setSelectedCargoTab}
-          value={tab.selectedCargoTab}
+          onValueChange={setSelectedCargoTab}
+          value={selectedCargoTab}
           className="flex flex-col gap-2"
         >
           <TabsList className="self-start">
             <TabsTrigger value="general">{t("information")}</TabsTrigger>
-            <TabsTrigger value="gallery" disabled={toggle.create}>
+            <TabsTrigger value="gallery" disabled={createMode}>
               {t("gallery")}
             </TabsTrigger>
-            <TabsTrigger value="expenses" disabled={toggle.create}>
-              {t("expenses")}
-            </TabsTrigger>
-            <TabsTrigger value="tracking" disabled={toggle.create}>
+            <TabsTrigger value="tracking" disabled={createMode}>
               {t("tracking")}
             </TabsTrigger>
           </TabsList>
@@ -274,13 +277,13 @@ export default () => {
               <ArrowLeftSquare className="text-primary" size={20} />
             </Button>
             <div className="flex items-center">
-              {!toggle.create && cargoStore.cargo?.referenceNumber && (
+              {!createMode && cargoStore.cargo?.referenceNumber && (
                 <Badge variant={"outline"}>
                   {t("cargoId")}: {cargoStore.cargo?.referenceNumber || 0}
                 </Badge>
               )}
             </div>
-            {!toggle.create && (
+            {!createMode && (
               <div className="flex items-center gap-4">
                 <DialogWrapper
                   title={t("sendCargo")}
@@ -444,7 +447,7 @@ export default () => {
             <CargoForm />
           </TabsContent>
           <TabsContent value="gallery">
-            {!toggle.create && (
+            {!createMode && (
               <TitleWrapper
                 title={t("gallery")}
                 modalNumber={3}
@@ -552,13 +555,8 @@ export default () => {
               </TitleWrapper>
             )}
           </TabsContent>
-          <TabsContent value="expenses">
-            {!toggle.create && cargoId && cargoId !== "create" && (
-              <CargoExpensesSection cargoId={cargoId} />
-            )}
-          </TabsContent>
           <TabsContent value="tracking">
-            {!toggle.create && (
+            {!createMode && (
               <TitleWrapper
                 title={t("tracking")}
                 className="md:col-span-2 p-4 h-fit"

@@ -11,10 +11,8 @@ import {
   BookUser,
   Car,
   DollarSign,
-  Fuel,
   HomeIcon,
   Package,
-  Settings,
   Settings2,
   UserCog2,
   UsersRound,
@@ -87,20 +85,6 @@ const SearchModal = ({ trigger }: SearchModalProps) => {
   ];
 
   const subPaths: PathDetailsType[] = [
-    {
-      label: {
-        name: t("searching.maintenance"),
-        icon: Settings,
-      },
-      link: "/expenses/maintenance",
-    },
-    {
-      label: {
-        name: t("searching.fuel"),
-        icon: Fuel,
-      },
-      link: "/expenses/fuel",
-    },
     {
       label: {
         name: t("searching.vehicleTypes"),

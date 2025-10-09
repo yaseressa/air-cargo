@@ -2,11 +2,11 @@ import {
   AuthRequest,
   AuthResponse,
   Cargo,
-  CargoExpense,
   CargoTracking,
   changePasswordRequest,
   Customer,
   Driver,
+  Expense,
   File as FileType,
   FuelExpense,
   FuelType,
@@ -114,22 +114,20 @@ const cargoPhotos = async ({
   return data;
 };
 
-type CargoExpensePayload = {
+type ExpensePayload = {
   description?: string;
   amount: number;
   currencyCode: string;
   incurredAt?: string | null;
 };
 
-const createCargoExpense = async ({
-  cargoId,
+const createExpense = async ({
   data,
   file,
 }: {
-  cargoId: string;
-  data: CargoExpensePayload;
+  data: ExpensePayload;
   file?: globalThis.File;
-}): Promise<CargoExpense> => {
+}): Promise<Expense> => {
   const formData = new FormData();
 
   formData.append(
@@ -141,8 +139,8 @@ const createCargoExpense = async ({
     formData.append("file", file);
   }
 
-  const { data: response } = await axiosApiClient.post<CargoExpense>(
-    `/cargos/${cargoId}/expenses`,
+  const { data: response } = await axiosApiClient.post<Expense>(
+    `/expenses`,
     formData
   );
 
@@ -645,12 +643,12 @@ export const useAddPhotos = (): UseMutationResult<FileType, Error, any> => {
   return useMutation(cargoPhotos);
 };
 
-export const useCreateCargoExpense = (): UseMutationResult<
-  CargoExpense,
+export const useCreateExpense = (): UseMutationResult<
+  Expense,
   Error,
-  { cargoId: string; data: CargoExpensePayload; file?: globalThis.File }
+  { data: ExpensePayload; file?: globalThis.File }
 > => {
-  return useMutation(createCargoExpense);
+  return useMutation(createExpense);
 };
 
 export const useDeleteFile = (): UseMutationResult<string, Error, string> => {
