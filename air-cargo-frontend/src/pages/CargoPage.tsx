@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   useCargos,
   fetchCargoPhotos,
+  useCargoPhotos,
   useLocations,
 } from "@/services/calls/queries";
 import { useAllCargoStore, useSelectedCargoStore } from "@/utils/store";
@@ -12,6 +13,8 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Images,
+  Loader2,
   SquarePen,
   Trash,
 } from "lucide-react";
@@ -26,6 +29,8 @@ import { SelectWrapper } from "@/components/re/select";
 import { Input } from "@/components/ui/input";
 import { FilteredReportGenerator } from "@/components/report-generators";
 import { Location } from "@/utils/types";
+import SecureImage from "@/components/secure-image";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default () => {
   const { t } = useTranslation();
@@ -35,6 +40,11 @@ export default () => {
   const cargosStore = useAllCargoStore();
   const { mutate: deleteCargo } = useDeleteCargo();
   const { data: locations, isLoading: _ } = useLocations();
+  const [previewCargoId, setPreviewCargoId] = useState<string>("");
+  const [isPreviewOpen, setPreviewOpen] = useState(false);
+  const { data: previewPhotos, isLoading: isPreviewLoading } = useCargoPhotos(
+    previewCargoId
+  );
 
   const { isLoading, refetch, isRefetching } = useCargos(
     cargosStore.currentPage!,
@@ -174,6 +184,17 @@ export default () => {
             <Button
               variant={"ghost"}
               className="p-2"
+              onClick={() => {
+                setPreviewCargoId(row.original.id);
+                setPreviewOpen(true);
+              }}
+              aria-label={t("cargoPhotos")}
+            >
+              <Images size={16} className="text-primary" />
+            </Button>
+            <Button
+              variant={"ghost"}
+              className="p-2"
               onMouseEnter={() => {
                 queryClient.prefetchQuery(
                   ["cargoPhotos", row.original.id],
@@ -287,6 +308,45 @@ export default () => {
           />
         </div>
       </main>
+      <Dialog
+        open={isPreviewOpen}
+        onOpenChange={(open) => {
+          setPreviewOpen(open);
+          if (!open) {
+            setPreviewCargoId("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{t("cargoPhotos")}</DialogTitle>
+          </DialogHeader>
+          {isPreviewLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : previewPhotos && previewPhotos.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {previewPhotos.map((file) => (
+                <div
+                  key={file.id}
+                  className="aspect-square overflow-hidden rounded border bg-muted/30"
+                >
+                  <SecureImage
+                    fileURL={file.fileUrl}
+                    fileName={file.fileName}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground">
+              {t("noImagesFound")}
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

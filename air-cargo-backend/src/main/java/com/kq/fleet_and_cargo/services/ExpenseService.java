@@ -1,13 +1,10 @@
 package com.kq.fleet_and_cargo.services;
 
-import com.kq.fleet_and_cargo.exceptions.NotFoundException;
-import com.kq.fleet_and_cargo.models.Cargo;
-import com.kq.fleet_and_cargo.models.CargoExpense;
+import com.kq.fleet_and_cargo.models.Expense;
 import com.kq.fleet_and_cargo.models.File;
 import com.kq.fleet_and_cargo.models.Money;
-import com.kq.fleet_and_cargo.payload.request.CargoExpenseRequest;
-import com.kq.fleet_and_cargo.repositories.CargoExpenseRepository;
-import com.kq.fleet_and_cargo.repositories.CargoRepository;
+import com.kq.fleet_and_cargo.payload.request.ExpenseRequest;
+import com.kq.fleet_and_cargo.repositories.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,21 +17,20 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class CargoExpenseService {
+public class ExpenseService {
 
-    private final CargoRepository cargoRepository;
-    private final CargoExpenseRepository cargoExpenseRepository;
+    private final ExpenseRepository expenseRepository;
     private final FileService fileService;
 
     @Transactional(readOnly = true)
-    public List<CargoExpense> list(String cargoId) {
-        List<CargoExpense> expenses = cargoExpenseRepository.findByCargoIdOrderByIncurredAtDesc(cargoId);
+    public List<Expense> list() {
+        List<Expense> expenses = expenseRepository.findAllByOrderByIncurredAtDesc();
         expenses.forEach(this::populateReceiptUrl);
         return expenses;
     }
 
     @Transactional
-    public CargoExpense create(String cargoId, CargoExpenseRequest request, MultipartFile receipt) throws IOException {
+    public Expense create(ExpenseRequest request, MultipartFile receipt) throws IOException {
         if (request == null) {
             throw new IllegalArgumentException("Expense data must be provided");
         }
@@ -45,14 +41,10 @@ public class CargoExpenseService {
             throw new IllegalArgumentException("Currency must be provided");
         }
 
-        Cargo cargo = cargoRepository.findById(cargoId)
-                .orElseThrow(() -> new NotFoundException("Cargo not found"));
-
         Money money = new Money(request.amount(), request.currencyCode());
         ZonedDateTime incurredAt = request.incurredAt() != null ? request.incurredAt() : ZonedDateTime.now();
 
-        CargoExpense expense = CargoExpense.builder()
-                .cargo(cargo)
+        Expense expense = Expense.builder()
                 .description(request.description())
                 .amount(money)
                 .incurredAt(incurredAt)
@@ -63,12 +55,12 @@ public class CargoExpenseService {
             expense.setReceipt(stored);
         }
 
-        CargoExpense saved = cargoExpenseRepository.save(expense);
+        Expense saved = expenseRepository.save(expense);
         populateReceiptUrl(saved);
         return saved;
     }
 
-    private void populateReceiptUrl(CargoExpense expense) {
+    private void populateReceiptUrl(Expense expense) {
         if (expense.getReceipt() != null) {
             expense.getReceipt().setFileUrl(fileService.buildPublicUrl(expense.getReceipt()));
         }

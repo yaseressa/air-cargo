@@ -1,7 +1,6 @@
 package com.kq.fleet_and_cargo.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,12 +13,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.ZonedDateTime;
 
 @Entity
+@Table(name = "expenses")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CargoExpense {
+public class Expense {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -35,11 +35,6 @@ public class CargoExpense {
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "receipt_file_id")
     private File receipt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cargo_id")
-    @JsonIgnore
-    private Cargo cargo;
 
     @CreationTimestamp
     private ZonedDateTime createdAt;

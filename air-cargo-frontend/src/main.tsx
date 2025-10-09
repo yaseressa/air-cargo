@@ -43,6 +43,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import { TitleWrapper } from "./components/wrapper";
 import DashboardPage from "./pages/DashboardPage";
 import CargoDashboardPage from "./pages/CargoDashboardPage";
+import ExpensesPage from "./pages/ExpensesPage";
 import { Footer } from "./components/footer";
 import AppSidebar from "./components/app-sidebar";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -263,6 +264,16 @@ const router = createBrowserRouter([
                 roles={["ADMIN", "USER"]}
                 redirect="/dashboard"
                 children={<CargoPage />}
+              />
+            ),
+          },
+          {
+            path: "/expenses",
+            element: (
+              <AccessControl
+                roles={["ADMIN", "USER"]}
+                redirect="/dashboard"
+                children={<ExpensesPage />}
               />
             ),
           },

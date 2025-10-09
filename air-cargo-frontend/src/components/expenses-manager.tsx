@@ -11,20 +11,17 @@ import { Item, SelectWrapper } from "@/components/re/select";
 import { TitleWrapper } from "@/components/wrapper";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCargoExpenses, useSupportedCurrencies } from "@/services/calls/queries";
-import { useCreateCargoExpense } from "@/services/calls/mutators";
+import { useExpenses, useSupportedCurrencies } from "@/services/calls/queries";
+import { useCreateExpense } from "@/services/calls/mutators";
 import { useLoggedUserStore } from "@/utils/store";
 import { useQueryClient } from "react-query";
 import { toast } from "@/components/ui/use-toast";
 import { buildFileUrl } from "@/utils";
 import SecureImage from "@/components/secure-image";
 import { Loader2, Paperclip } from "lucide-react";
+import type { Expense } from "@/utils/types";
 
-interface CargoExpensesSectionProps {
-  cargoId: string;
-}
-
-type ExpenseFormValues = {
+export type ExpenseFormValues = {
   description: string;
   amount: string;
   currencyCode: string;
@@ -44,13 +41,13 @@ const formatAmount = (amount?: { amount?: number; currencyCode?: string }) => {
   }
 };
 
-export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => {
+const ExpensesManager = () => {
   const { t } = useTranslation();
   const loggedUser = useLoggedUserStore();
   const queryClient = useQueryClient();
-  const { data: expenses, isLoading: isExpensesLoading } = useCargoExpenses(cargoId);
+  const { data: expenses, isLoading: isExpensesLoading } = useExpenses();
   const { data: supportedCurrencies, isLoading: isCurrencyLoading } = useSupportedCurrencies();
-  const { mutate: createExpense, isLoading: isCreating } = useCreateCargoExpense();
+  const { mutate: createExpense, isLoading: isCreating } = useCreateExpense();
   const [receiptFile, setReceiptFile] = useState<globalThis.File | undefined>();
   const [receiptPreview, setReceiptPreview] = useState<string | undefined>();
 
@@ -138,27 +135,24 @@ export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => 
       description: values.description,
       amount: Number(values.amount),
       currencyCode: values.currencyCode,
-      incurredAt: values.incurredAt
-        ? new Date(values.incurredAt).toISOString()
-        : null,
+      incurredAt: values.incurredAt ? new Date(values.incurredAt).toISOString() : null,
     };
 
     createExpense(
-      { cargoId, data: payload, file: receiptFile },
+      { data: payload, file: receiptFile },
       {
         onSuccess: () => {
           toast({
             title: t("success"),
             description: t("expenseCreated"),
           });
-          queryClient.invalidateQueries(["cargoExpenses", cargoId]);
+          queryClient.invalidateQueries(["expenses"]);
           resetForm(values.currencyCode);
         },
         onError: (error) => {
           toast({
             title: t("error"),
-            description:
-              error instanceof Error ? error.message : t("expenseCreationFailed"),
+            description: error instanceof Error ? error.message : t("expenseCreationFailed"),
             variant: "destructive",
           });
         },
@@ -202,7 +196,6 @@ export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => 
                       <FloatingLabelInput
                         label={t("expenseAmount")}
                         className="p-2 h-10"
-                        type="number"
                         {...field}
                       />
                     </FormControl>
@@ -215,19 +208,20 @@ export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => 
                 name="currencyCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("expenseCurrency")}</FormLabel>
+                    <FormLabel>{t("currency")}</FormLabel>
                     <SelectWrapper
-                      isForm
-                      data={
-                        (supportedCurrencies || []).map((currency) => ({
+                      data={supportedCurrencies?.map(
+                        (currency: string): Item => ({
                           label: currency,
                           value: currency,
-                        })) as Item[]
+                        })
+                      )}
+                      placeholder={
+                        isCurrencyLoading ? t("loading") : t("selectCurrencyPlaceholder")
                       }
-                      readonly={isCurrencyLoading}
-                      value={field.value}
                       onValueChange={field.onChange}
-                      placeholder={t("expenseCurrency")}
+                      value={field.value}
+                      disabled={isCurrencyLoading}
                     />
                     <FormMessage />
                   </FormItem>
@@ -240,30 +234,33 @@ export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => 
               name="incurredAt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("expenseDate")}</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
+                  <FormLabel>{t("incurredAt")}</FormLabel>
+                  <Input
+                    type="date"
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="rounded"
+                  />
                   <FormMessage />
                 </FormItem>
               )}
             />
 
             <div className="space-y-2">
-              <FormLabel>{t("expenseReceipt")}</FormLabel>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                aria-label={t("expenseReceipt")}
-              />
+              <FormLabel>{t("receiptOptional")}</FormLabel>
+              <label className="flex items-center gap-2 cursor-pointer rounded border px-3 py-2 text-sm">
+                <Paperclip className="h-4 w-4" />
+                <span>{receiptFile ? receiptFile.name : t("attachReceipt")}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </label>
               {receiptPreview && (
-                <div className="h-24 w-24 overflow-hidden rounded-md border">
-                  <img
-                    src={receiptPreview}
-                    alt={t("receiptPreview")}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-32 w-full overflow-hidden rounded border">
+                  <img src={receiptPreview} alt={t("receiptPreview") ?? ""} className="h-full w-full object-cover" />
                 </div>
               )}
             </div>
@@ -283,54 +280,62 @@ export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => 
 
         <div className="space-y-4">
           {isExpensesLoading ? (
-            <div className="grid gap-4">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <Skeleton key={index} className="h-28 w-full" />
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-32 w-full" />
               ))}
             </div>
           ) : expenses && expenses.length > 0 ? (
-            <div className="space-y-4">
-              {expenses.map((expense) => (
-                <Card key={expense.id}>
-                  <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-medium">{expense.description}</p>
+            <div className="grid gap-4">
+              {expenses.map((expense: Expense) => (
+                <Card key={expense.id} className="border rounded-lg">
+                  <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr,160px]">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">{expense.description}</h3>
                       <p className="text-sm text-muted-foreground">
+                        {t("incurredOn", {
+                          date: expense.incurredAt
+                            ? new Date(expense.incurredAt).toLocaleDateString()
+                            : t("notAvailable"),
+                        })}
+                      </p>
+                      <p className="font-medium text-primary">
                         {formatAmount(expense.amount)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {expense.incurredAt
-                          ? new Date(expense.incurredAt).toLocaleDateString()
-                          : ""}
-                      </p>
                     </div>
-                    {expense.receipt?.fileUrl ? (
-                      <a
-                        href={buildFileUrl(expense.receipt.fileUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
-                      >
-                        <Paperclip className="h-4 w-4" />
-                        {t("viewReceipt")}
-                      </a>
-                    ) : null}
-                    {expense.receipt?.fileUrl && (
-                      <div className="h-16 w-16 overflow-hidden rounded-md border">
-                        <SecureImage
-                          fileURL={expense.receipt.fileUrl}
-                          fileName={expense.receipt.fileName ?? "receipt"}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    )}
+
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      {expense.receipt?.fileUrl ? (
+                        <div className="h-32 w-full overflow-hidden rounded border bg-muted/30">
+                          <SecureImage
+                            fileURL={expense.receipt.fileUrl}
+                            fileName={expense.receipt.fileName ?? "receipt"}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center">
+                          {t("noReceiptAttached")}
+                        </p>
+                      )}
+                      {expense.receipt?.fileUrl && (
+                        <a
+                          href={buildFileUrl(expense.receipt.fileUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-primary underline"
+                        >
+                          {t("viewReceipt")}
+                        </a>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : (
-            <div className="flex h-full min-h-[7rem] items-center justify-center rounded-md border border-dashed">
-              <p className="text-sm text-muted-foreground">{t("noExpenses")}</p>
+            <div className="flex h-full items-center justify-center rounded border p-6">
+              <p className="text-muted-foreground">{t("noExpensesYet")}</p>
             </div>
           )}
         </div>
@@ -339,4 +344,4 @@ export const CargoExpensesSection = ({ cargoId }: CargoExpensesSectionProps) => 
   );
 };
 
-export default CargoExpensesSection;
+export default ExpensesManager;

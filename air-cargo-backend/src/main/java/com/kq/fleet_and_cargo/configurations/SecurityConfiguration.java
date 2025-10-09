@@ -42,8 +42,7 @@ public class SecurityConfiguration {
                         "/api/cargos/tracking/public/**",
                         "/api/cargos/file/**",
                         "/api/cargos/*/files",
-                        "/api/cargos/file/*/preview",
-                        "/api/expenses/file/*/preview"
+                        "/api/cargos/file/*/preview"
         };
 
         @Bean
@@ -63,6 +62,7 @@ public class SecurityConfiguration {
                                                 .hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers("/api/fx-rates/**").hasAuthority("ADMIN")
                                                 .requestMatchers("/api/cargos/**").hasAnyAuthority("ADMIN", "USER")
+                                                .requestMatchers("/api/expenses/**").hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers("/api/customers/**").hasAnyAuthority("ADMIN", "USER")
                                                 .requestMatchers("/api/notifications/**")
                                                 .hasAnyAuthority("ADMIN", "USER")

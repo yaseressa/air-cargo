@@ -3,12 +3,12 @@ import { axiosAuthClient, axiosApiClient } from "../clients";
 import {
   AuthResponse,
   Cargo,
-  CargoExpense,
   CargoResponseType,
   CargoTypeSummaryReport,
   CargoTracking,
   Customer,
   CustomersResponseType,
+  Expense,
   File,
   FXRate,
   FxRatesResponseType,
@@ -223,16 +223,15 @@ export const useCargoPhotos = (id: string) => {
   });
 };
 
-const fetchCargoExpenses = async (id: string): Promise<CargoExpense[]> => {
-  const { data } = await axiosApiClient.get(`/cargos/${id}/expenses`);
+const fetchExpenses = async (): Promise<Expense[]> => {
+  const { data } = await axiosApiClient.get("/expenses");
   return data;
 };
 
-export const useCargoExpenses = (id?: string) => {
-  return useQuery<CargoExpense[]>(["cargoExpenses", id], () => fetchCargoExpenses(id!), {
-    enabled: !!id,
+export const useExpenses = () => {
+  return useQuery<Expense[]>(["expenses"], fetchExpenses, {
     onError: (error) => {
-      console.error("Error fetching cargo expenses:", error);
+      console.error("Error fetching expenses:", error);
     },
   });
 };

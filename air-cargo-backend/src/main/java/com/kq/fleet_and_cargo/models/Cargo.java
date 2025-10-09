@@ -2,7 +2,6 @@ package com.kq.fleet_and_cargo.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -42,9 +41,6 @@ public class Cargo {
     private int quantity;
     @OneToMany(mappedBy = "cargo", cascade = CascadeType.ALL)
     private List<CargoTrackingHistory> trackingHistory = new ArrayList<>();
-    @OneToMany(mappedBy = "cargo", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<CargoExpense> expenses = new ArrayList<>();
     @Embedded
     private Money price;
 
