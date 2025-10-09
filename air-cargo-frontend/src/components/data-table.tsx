@@ -82,6 +82,7 @@ export default ({
   columnsShown = true,
   createLink,
   selectables,
+  onCreateClick,
 }: {
   pagination?: PaginationType;
   tableData: any[];
@@ -110,6 +111,7 @@ export default ({
   columnsShown?: boolean;
   createLink?: string;
   selectables?: React.ReactElement;
+  onCreateClick?: () => void;
 }) => {
   return (
     <>
@@ -138,6 +140,7 @@ export default ({
           columnsShown={columnsShown}
           createLink={createLink}
           selectables={selectables}
+          onCreateClick={onCreateClick}
         />
       ) : (
         <DataTableSkeleton />
@@ -170,6 +173,7 @@ const DataTableCore = ({
   columnsShown = true,
   createLink,
   selectables,
+  onCreateClick,
 }: {
   pagination?: PaginationType;
   tableData: any[];
@@ -197,6 +201,7 @@ const DataTableCore = ({
   columnsShown?: boolean;
   createLink?: string;
   selectables?: React.ReactElement;
+  onCreateClick?: () => void;
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -313,12 +318,14 @@ const DataTableCore = ({
                 "flex-wrap ": report,
               })}
             >
-              {(create || createLink) && (
+              {(create || createLink || onCreateClick) && (
                 <Button
                   variant={"outline"}
                   className="shadow-none md:p-2 flex-1 lg:w-auto"
                   onClick={() => {
-                    if (create) {
+                    if (onCreateClick) {
+                      onCreateClick();
+                    } else if (create) {
                       setSelected?.({});
                       modalNumber.setModalNumberAndType(create, "create");
                     } else {
