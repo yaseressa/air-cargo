@@ -9,6 +9,8 @@ import {
   Customer,
   CustomersResponseType,
   Expense,
+  ExpenseCurrencySummary,
+  ExpenseMonthlyTrend,
   File,
   FXRate,
   FxRatesResponseType,
@@ -697,6 +699,74 @@ export const useCargoTypeDistributionReport = (
     {
       onError: (error) => {
         console.error("Error fetching cargo type distribution report:", error);
+      },
+    }
+  );
+};
+
+const fetchExpenseCurrencySummaryReport = async (
+  fromDate: string,
+  toDate: string,
+  search: string
+): Promise<ExpenseCurrencySummary[]> => {
+  const { data } = await axiosApiClient.get(
+    "/reports/expenses/currency-breakdown/preview",
+    {
+      params: {
+        startDate: fromDate,
+        endDate: toDate,
+        search,
+      },
+    }
+  );
+  return data;
+};
+
+export const useExpenseCurrencySummaryReport = (
+  fromDate: string,
+  toDate: string,
+  search: string
+) => {
+  return useQuery<ExpenseCurrencySummary[]>(
+    ["expenseCurrencySummary", fromDate, toDate, search],
+    () => fetchExpenseCurrencySummaryReport(fromDate, toDate, search),
+    {
+      onError: (error) => {
+        console.error("Error fetching expense currency summary:", error);
+      },
+    }
+  );
+};
+
+const fetchExpenseMonthlyTrendReport = async (
+  fromDate: string,
+  toDate: string,
+  search: string
+): Promise<ExpenseMonthlyTrend[]> => {
+  const { data } = await axiosApiClient.get(
+    "/reports/expenses/monthly-trend/preview",
+    {
+      params: {
+        startDate: fromDate,
+        endDate: toDate,
+        search,
+      },
+    }
+  );
+  return data;
+};
+
+export const useExpenseMonthlyTrendReport = (
+  fromDate: string,
+  toDate: string,
+  search: string
+) => {
+  return useQuery<ExpenseMonthlyTrend[]>(
+    ["expenseMonthlyTrend", fromDate, toDate, search],
+    () => fetchExpenseMonthlyTrendReport(fromDate, toDate, search),
+    {
+      onError: (error) => {
+        console.error("Error fetching expense monthly trend:", error);
       },
     }
   );

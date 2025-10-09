@@ -19,6 +19,8 @@ import {
   FXRate,
   PickupCityRevenueReport,
   CargoTypeSummaryReport,
+  ExpenseCurrencySummary,
+  ExpenseMonthlyTrend,
 } from "./types";
 import { ColumnDef } from "@/components/data-table";
 import { create } from "zustand";
@@ -731,6 +733,12 @@ export const usePickupRevenueReportStore =
 
 export const useCargoTypeDistributionReportStore =
   createAggregateReportStore<CargoTypeSummaryReport>();
+
+export const useExpenseCurrencySummaryStore =
+  createAggregateReportStore<ExpenseCurrencySummary>();
+
+export const useExpenseMonthlyTrendStore =
+  createAggregateReportStore<ExpenseMonthlyTrend>();
 
 type LocationStoreProps = {
   data?: Location[];
