@@ -65,6 +65,7 @@ public class SecurityConfiguration {
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .authorizeHttpRequests(req -> req
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                                 .requestMatchers("/api/files/**").permitAll()
                                                 .requestMatchers(ADMIN_ONLY_ENDPOINTS).hasAuthority("ADMIN")
