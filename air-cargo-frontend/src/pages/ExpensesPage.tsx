@@ -18,9 +18,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
@@ -45,7 +58,9 @@ const formatAmount = (expense?: Expense) => {
       minimumFractionDigits: 2,
     }).format(Number(expense.amount.amount));
   } catch (error) {
-    return `${expense.amount.amount} ${expense.amount.currencyCode ?? ""}`.trim();
+    return `${expense.amount.amount} ${
+      expense.amount.currencyCode ?? ""
+    }`.trim();
   }
 };
 
@@ -53,7 +68,8 @@ const ExpensesPage = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: expenses = [], isLoading, isFetching } = useExpenses();
-  const { data: supportedCurrencies = [], isLoading: loadingCurrencies } = useSupportedCurrencies();
+  const { data: supportedCurrencies = [], isLoading: loadingCurrencies } =
+    useSupportedCurrencies();
   const { mutate: createExpense, isLoading: isCreating } = useCreateExpense();
 
   const [searchCriteria, setSearchCriteria] = useState("");
@@ -105,7 +121,8 @@ const ExpensesPage = () => {
   };
 
   const resetForm = () => {
-    const preferredCurrency = form.getValues("currencyCode") || supportedCurrencies?.[0] || "";
+    const preferredCurrency =
+      form.getValues("currencyCode") || supportedCurrencies?.[0] || "";
     form.reset({
       description: "",
       amount: "",
@@ -120,7 +137,9 @@ const ExpensesPage = () => {
       description: values.description,
       amount: Number(values.amount),
       currencyCode: values.currencyCode,
-      incurredAt: values.incurredAt ? new Date(values.incurredAt).toISOString() : null,
+      incurredAt: values.incurredAt
+        ? new Date(values.incurredAt).toISOString()
+        : null,
     };
 
     createExpense(
@@ -137,7 +156,10 @@ const ExpensesPage = () => {
         onError: (error) => {
           toast({
             title: t("error"),
-            description: error instanceof Error ? error.message : t("expenseCreationFailed"),
+            description:
+              error instanceof Error
+                ? error.message
+                : t("expenseCreationFailed"),
             variant: "destructive",
           });
         },
@@ -155,15 +177,24 @@ const ExpensesPage = () => {
           ]
             .filter(Boolean)
             .some((value) =>
-              value!.toString().toLowerCase().includes(searchCriteria.toLowerCase())
+              value!
+                .toString()
+                .toLowerCase()
+                .includes(searchCriteria.toLowerCase())
             )
         : true;
 
-      const incurredDate = expense.incurredAt ? new Date(expense.incurredAt) : undefined;
+      const incurredDate = expense.incurredAt
+        ? new Date(expense.incurredAt)
+        : undefined;
       const from = fromDate ? new Date(fromDate) : undefined;
       const to = toDate ? new Date(toDate) : undefined;
 
-      const afterFrom = from ? (incurredDate ? incurredDate >= from : false) : true;
+      const afterFrom = from
+        ? incurredDate
+          ? incurredDate >= from
+          : false
+        : true;
       const beforeTo = to ? (incurredDate ? incurredDate <= to : false) : true;
 
       return matchesSearch && afterFrom && beforeTo;
@@ -185,7 +216,11 @@ const ExpensesPage = () => {
       {
         header: t("expenseDescription"),
         accessorKey: "description",
-        cell: ({ row }) => <span className="font-medium text-primary">{row.original.description}</span>,
+        cell: ({ row }) => (
+          <span className="font-medium text-primary">
+            {row.original.description}
+          </span>
+        ),
       },
       {
         header: t("amount"),
@@ -213,7 +248,9 @@ const ExpensesPage = () => {
         header: t("createdAt"),
         accessorKey: "createdAt",
         cell: ({ row }) =>
-          row.original.createdAt ? format(new Date(row.original.createdAt), "PP") : t("nA"),
+          row.original.createdAt
+            ? format(new Date(row.original.createdAt), "PP")
+            : t("nA"),
       },
       {
         header: t("expenseReceipt"),
@@ -221,13 +258,19 @@ const ExpensesPage = () => {
         cell: ({ row }) =>
           row.original.receipt?.fileUrl ? (
             <Button variant="ghost" size="sm" asChild>
-              <a href={row.original.receipt.fileUrl} target="_blank" rel="noopener noreferrer">
+              <a
+                href={row.original.receipt.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 {t("viewReceipt")}
               </a>
             </Button>
           ) : (
-            <span className="text-muted-foreground">{t("noReceiptAttached")}</span>
+            <span className="text-muted-foreground">
+              {t("noReceiptAttached")}
+            </span>
           ),
       },
     ],
@@ -239,10 +282,6 @@ const ExpensesPage = () => {
       <Header />
       <main className="flex flex-col gap-6 m-2">
         <div className="px-2 flex flex-col gap-2">
-          <div>
-            <h1 className="text-2xl font-semibold text-primary">{t("expenses")}</h1>
-            <p className="text-sm text-muted-foreground">{t("expensesPageSubtitle")}</p>
-          </div>
           <div className="flex flex-wrap gap-4">
             {Object.entries(totalsByCurrency).map(([currency, total]) => (
               <Card key={currency} className="min-w-[180px]">
@@ -269,7 +308,9 @@ const ExpensesPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-lg text-muted-foreground">{t("startByRecordingExpense")}</p>
+                  <p className="text-lg text-muted-foreground">
+                    {t("startByRecordingExpense")}
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -278,10 +319,15 @@ const ExpensesPage = () => {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>{t("addExpense")}</DialogTitle>
-                <DialogDescription>{t("recordNewExpenseDescription")}</DialogDescription>
+                <DialogDescription>
+                  {t("recordNewExpenseDescription")}
+                </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+                <form
+                  className="space-y-4"
+                  onSubmit={form.handleSubmit(onSubmit)}
+                >
                   <FormField
                     control={form.control}
                     name="description"
@@ -289,7 +335,10 @@ const ExpensesPage = () => {
                       <FormItem>
                         <FormLabel>{t("expenseDescription")}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t("expenseDescriptionPlaceholder")} {...field} />
+                          <Input
+                            placeholder={t("expenseDescriptionPlaceholder")}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -303,7 +352,13 @@ const ExpensesPage = () => {
                         <FormItem>
                           <FormLabel>{t("expenseAmount")}</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -322,12 +377,18 @@ const ExpensesPage = () => {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder={t("selectCurrency")} />
+                                <SelectValue
+                                  placeholder={t("selectCurrency")}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {supportedCurrencies?.map((currency) => (
-                                <SelectItem key={currency} value={currency} className="uppercase">
+                                <SelectItem
+                                  key={currency}
+                                  value={currency}
+                                  className="uppercase"
+                                >
                                   {currency}
                                 </SelectItem>
                               ))}

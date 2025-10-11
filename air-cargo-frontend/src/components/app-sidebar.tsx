@@ -7,6 +7,7 @@ import {
   MapPinHouse,
   Route,
   UserCog2,
+  DollarSign,
 } from "lucide-react";
 import { SideBarWrapper } from "./re/sidebar";
 import { motion } from "framer-motion";
@@ -38,6 +39,11 @@ export default () => {
             badge: cargoCounter.numberOfCargos,
           },
 
+          {
+            label: { name: t("expenses"), icon: DollarSign },
+            link: "/expenses",
+            roles: ["ADMIN", "USER"],
+          },
           {
             label: { name: t("reports"), icon: Route },
             link: "/reports",
