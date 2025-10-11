@@ -1,5 +1,6 @@
 package com.kq.fleet_and_cargo.services;
 
+import com.kq.fleet_and_cargo.exceptions.NotFoundException;
 import com.kq.fleet_and_cargo.models.Expense;
 import com.kq.fleet_and_cargo.models.File;
 import com.kq.fleet_and_cargo.models.Money;
@@ -31,6 +32,54 @@ public class ExpenseService {
 
     @Transactional
     public Expense create(ExpenseRequest request, MultipartFile receipt) throws IOException {
+        Expense expense = new Expense();
+        applyRequest(expense, request);
+
+        if (receipt != null && !receipt.isEmpty()) {
+            replaceReceipt(expense, receipt);
+        }
+
+        Expense saved = expenseRepository.save(expense);
+        populateReceiptUrl(saved);
+        return saved;
+    }
+
+    @Transactional
+    public Expense update(String expenseId, ExpenseRequest request, MultipartFile receipt) throws IOException {
+        if (!hasText(expenseId)) {
+            throw new IllegalArgumentException("Expense id must be provided");
+        }
+        Expense existing = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new NotFoundException("Expense not found"));
+
+        applyRequest(existing, request);
+
+        if (receipt != null && !receipt.isEmpty()) {
+            replaceReceipt(existing, receipt);
+        }
+
+        Expense saved = expenseRepository.save(existing);
+        populateReceiptUrl(saved);
+        return saved;
+    }
+
+    @Transactional
+    public void delete(String expenseId) {
+        if (!hasText(expenseId)) {
+            throw new IllegalArgumentException("Expense id must be provided");
+        }
+
+        Expense existing = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new NotFoundException("Expense not found"));
+
+        if (existing.getReceipt() != null) {
+            fileService.deleteFile(existing.getReceipt().getId());
+        }
+
+        expenseRepository.delete(existing);
+    }
+
+    private void applyRequest(Expense expense, ExpenseRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Expense data must be provided");
         }
@@ -44,20 +93,18 @@ public class ExpenseService {
         Money money = new Money(request.amount(), request.currencyCode());
         ZonedDateTime incurredAt = request.incurredAt() != null ? request.incurredAt() : ZonedDateTime.now();
 
-        Expense expense = Expense.builder()
-                .description(request.description())
-                .amount(money)
-                .incurredAt(incurredAt)
-                .build();
+        expense.setDescription(request.description());
+        expense.setAmount(money);
+        expense.setIncurredAt(incurredAt);
+    }
 
-        if (receipt != null && !receipt.isEmpty()) {
-            File stored = fileService.saveFile(receipt);
-            expense.setReceipt(stored);
+    private void replaceReceipt(Expense expense, MultipartFile receipt) throws IOException {
+        if (expense.getReceipt() != null) {
+            fileService.deleteFile(expense.getReceipt().getId());
+            expense.setReceipt(null);
         }
-
-        Expense saved = expenseRepository.save(expense);
-        populateReceiptUrl(saved);
-        return saved;
+        File stored = fileService.saveFile(receipt);
+        expense.setReceipt(stored);
     }
 
     private void populateReceiptUrl(Expense expense) {

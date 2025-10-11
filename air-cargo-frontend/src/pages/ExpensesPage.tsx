@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, PenBox, Trash } from "lucide-react";
 import { useQueryClient } from "react-query";
 import { useTranslation } from "react-i18next";
 
@@ -37,7 +37,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
-import { useCreateExpense } from "@/services/calls/mutators";
+import DialogWrapper from "@/components/re/dialog";
+import {
+  useCreateExpense,
+  useDeleteExpense,
+  useUpdateExpense,
+} from "@/services/calls/mutators";
 import { useExpenses, useSupportedCurrencies } from "@/services/calls/queries";
 import type { Expense } from "@/utils/types";
 
@@ -71,12 +76,17 @@ const ExpensesPage = () => {
   const { data: supportedCurrencies = [], isLoading: loadingCurrencies } =
     useSupportedCurrencies();
   const { mutate: createExpense, isLoading: isCreating } = useCreateExpense();
+  const { mutate: updateExpense, isLoading: isUpdating } = useUpdateExpense();
+  const { mutate: removeExpense, isLoading: isDeleting } = useDeleteExpense();
 
   const [searchCriteria, setSearchCriteria] = useState("");
   const [fromDate, setFromDate] = useState<string | undefined>();
   const [toDate, setToDate] = useState<string | undefined>();
   const [receiptFile, setReceiptFile] = useState<globalThis.File | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const formSchema = useMemo(
     () =>
@@ -116,6 +126,7 @@ const ExpensesPage = () => {
   const handleDialogChange = (open: boolean) => {
     setDialogOpen(open);
     if (!open) {
+      setEditingExpense(undefined);
       resetForm();
     }
   };
@@ -130,7 +141,76 @@ const ExpensesPage = () => {
       incurredAt: today,
     });
     setReceiptFile(undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
+
+  const handleEdit = useCallback(
+    (expense: Expense) => {
+      if (!expense?.id) {
+        return;
+      }
+
+      const incurredDate = expense.incurredAt
+        ? format(new Date(expense.incurredAt), "yyyy-MM-dd")
+        : today;
+
+      form.reset({
+        description: expense.description ?? "",
+        amount:
+          expense.amount?.amount !== undefined
+            ? String(expense.amount.amount)
+            : "",
+        currencyCode:
+          expense.amount?.currencyCode ??
+          form.getValues("currencyCode") ??
+          supportedCurrencies?.[0] ??
+          "",
+        incurredAt: incurredDate,
+      });
+      setEditingExpense(expense);
+      setReceiptFile(undefined);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setDialogOpen(true);
+    },
+    [form, setDialogOpen, supportedCurrencies, today]
+  );
+
+  const handleDelete = useCallback(
+    (expense: Expense) => {
+      if (!expense?.id) {
+        return;
+      }
+
+      setDeletingExpenseId(expense.id);
+      removeExpense(expense.id, {
+        onSuccess: () => {
+          toast({
+            title: t("success"),
+            description: t("expenseDeleted"),
+          });
+          queryClient.invalidateQueries(["expenses"]);
+        },
+        onError: (error) => {
+          toast({
+            title: t("error"),
+            description:
+              error instanceof Error
+                ? error.message
+                : t("expenseDeletionFailed"),
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          setDeletingExpenseId(null);
+        },
+      });
+    },
+    [queryClient, removeExpense, setDeletingExpenseId, t]
+  );
 
   const onSubmit = (values: ExpenseFormValues) => {
     const payload = {
@@ -142,29 +222,49 @@ const ExpensesPage = () => {
         : null,
     };
 
-    createExpense(
-      { data: payload, file: receiptFile },
-      {
-        onSuccess: () => {
-          toast({
-            title: t("success"),
-            description: t("expenseCreated"),
-          });
-          queryClient.invalidateQueries(["expenses"]);
-          handleDialogChange(false);
-        },
-        onError: (error) => {
-          toast({
-            title: t("error"),
-            description:
-              error instanceof Error
-                ? error.message
-                : t("expenseCreationFailed"),
-            variant: "destructive",
-          });
-        },
-      }
-    );
+    const handleSuccess = (message: string) => {
+      toast({
+        title: t("success"),
+        description: message,
+      });
+      queryClient.invalidateQueries(["expenses"]);
+      handleDialogChange(false);
+    };
+
+    const handleError = (error: unknown, fallbackMessage: string) => {
+      toast({
+        title: t("error"),
+        description:
+          error instanceof Error ? error.message : fallbackMessage,
+        variant: "destructive",
+      });
+    };
+
+    if (editingExpense?.id) {
+      updateExpense(
+        { id: editingExpense.id, data: payload, file: receiptFile },
+        {
+          onSuccess: () => {
+            handleSuccess(t("expenseUpdated"));
+          },
+          onError: (error) => {
+            handleError(error, t("expenseUpdateFailed"));
+          },
+        }
+      );
+    } else {
+      createExpense(
+        { data: payload, file: receiptFile },
+        {
+          onSuccess: () => {
+            handleSuccess(t("expenseCreated"));
+          },
+          onError: (error) => {
+            handleError(error, t("expenseCreationFailed"));
+          },
+        }
+      );
+    }
   };
 
   const filteredExpenses = useMemo(() => {
@@ -210,6 +310,8 @@ const ExpensesPage = () => {
       return acc;
     }, {});
   }, [filteredExpenses]);
+
+  const isSubmitting = isCreating || isUpdating;
 
   const columns = useMemo<ColumnDef[]>(
     () => [
@@ -273,8 +375,64 @@ const ExpensesPage = () => {
             </span>
           ),
       },
+      {
+        header: t("actions"),
+        accessorKey: "actions",
+        cell: ({ row }) => {
+          const expense: Expense = row.original;
+          const isRowDeleting =
+            isDeleting && deletingExpenseId === expense.id;
+
+          return (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEdit(expense)}
+                aria-label={t("edit")}
+              >
+                <PenBox className="h-4 w-4" />
+              </Button>
+              <DialogWrapper
+                title={t("deleteExpense")}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("delete")}
+                  >
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                }
+                footer={
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDelete(expense)}
+                    disabled={isRowDeleting}
+                  >
+                    {isRowDeleting ? t("deleting") : t("delete")}
+                  </Button>
+                }
+              >
+                <p className="text-sm text-muted-foreground">
+                  {t("confirmDeleteExpense", {
+                    description:
+                      expense.description || t("expense").toLowerCase(),
+                  })}
+                </p>
+              </DialogWrapper>
+            </div>
+          );
+        },
+      },
     ],
-    [t]
+    [
+      deletingExpenseId,
+      handleDelete,
+      handleEdit,
+      isDeleting,
+      t,
+    ]
   );
 
   return (
@@ -318,9 +476,13 @@ const ExpensesPage = () => {
           <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>{t("addExpense")}</DialogTitle>
+                <DialogTitle>
+                  {editingExpense ? t("editExpense") : t("addExpense")}
+                </DialogTitle>
                 <DialogDescription>
-                  {t("recordNewExpenseDescription")}
+                  {editingExpense
+                    ? t("updateExpenseDescription")
+                    : t("recordNewExpenseDescription")}
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -412,11 +574,27 @@ const ExpensesPage = () => {
                       </FormItem>
                     )}
                   />
+                  {editingExpense?.receipt?.fileUrl && (
+                    <div className="space-y-1">
+                      <FormLabel>{t("currentReceipt")}</FormLabel>
+                      <Button variant="link" asChild className="px-0">
+                        <a
+                          href={editingExpense.receipt.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4 inline" />
+                          {t("viewReceipt")}
+                        </a>
+                      </Button>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <FormLabel>{t("expenseReceipt")}</FormLabel>
                     <Input
                       type="file"
                       accept="image/*,application/pdf"
+                      ref={fileInputRef}
                       onChange={(event) => {
                         const file = event.target.files?.[0];
                         setReceiptFile(file ?? undefined);
@@ -424,8 +602,12 @@ const ExpensesPage = () => {
                     />
                   </div>
                   <DialogFooter>
-                    <Button type="submit" disabled={isCreating}>
-                      {isCreating ? t("saving") : t("save")}
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting
+                        ? t("saving")
+                        : editingExpense
+                        ? t("update")
+                        : t("save")}
                     </Button>
                   </DialogFooter>
                 </form>
