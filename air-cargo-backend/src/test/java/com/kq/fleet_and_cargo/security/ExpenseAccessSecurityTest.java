@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +28,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.TestConfiguration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -34,6 +36,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Collections;
 
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(controllers = {ExpenseController.class, ReportController.class})
@@ -120,6 +124,24 @@ class ExpenseAccessSecurityTest {
     }
 
     @Test
+    @WithMockUser(authorities = "USER")
+    void userCanPreviewExpenseCurrencySummary() throws Exception {
+        given(reportService.getExpenseCurrencySummary(any(), any(), any())).willReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/reports/expenses/currency-breakdown/preview"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void userCanPreviewExpenseMonthlyTrend() throws Exception {
+        given(reportService.getExpenseMonthlyTrend(any(), any(), any())).willReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/reports/expenses/monthly-trend/preview"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void unauthenticatedUserCannotCreateExpense() throws Exception {
         mockMvc.perform(multipart("/api/expenses")
                         .file(expensePart())
@@ -141,5 +163,13 @@ class ExpenseAccessSecurityTest {
     void userWithoutRequiredAuthorityCannotAccessExpenseReports() throws Exception {
         mockMvc.perform(get("/api/reports/expenses"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void corsPreflightIsPermitted() throws Exception {
+        mockMvc.perform(options("/api/expenses")
+                        .header(HttpHeaders.ORIGIN, "http://example.com")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isOk());
     }
 }

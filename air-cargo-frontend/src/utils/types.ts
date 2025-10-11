@@ -32,6 +32,7 @@ export interface Expense {
   incurredAt?: string;
   receipt?: File;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ExpenseCurrencySummary {
