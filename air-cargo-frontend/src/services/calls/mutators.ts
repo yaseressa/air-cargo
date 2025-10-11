@@ -147,6 +147,38 @@ const createExpense = async ({
   return response;
 };
 
+const updateExpense = async ({
+  id,
+  data,
+  file,
+}: {
+  id: string;
+  data: ExpensePayload;
+  file?: globalThis.File;
+}): Promise<Expense> => {
+  const formData = new FormData();
+
+  formData.append(
+    "expense",
+    new Blob([JSON.stringify(data)], { type: "application/json" })
+  );
+
+  if (file) {
+    formData.append("file", file);
+  }
+
+  const { data: response } = await axiosApiClient.put<Expense>(
+    `/expenses/${id}`,
+    formData
+  );
+
+  return response;
+};
+
+const deleteExpense = async (expenseId: string): Promise<void> => {
+  await axiosApiClient.delete(`/expenses/${expenseId}`);
+};
+
 const deleteFileType = async (FileTypeId: string): Promise<string> => {
   const { data } = await axiosApiClient.delete(`/cargos/file/${FileTypeId}`);
   return data;
@@ -649,6 +681,22 @@ export const useCreateExpense = (): UseMutationResult<
   { data: ExpensePayload; file?: globalThis.File }
 > => {
   return useMutation(createExpense);
+};
+
+export const useUpdateExpense = (): UseMutationResult<
+  Expense,
+  Error,
+  { id: string; data: ExpensePayload; file?: globalThis.File }
+> => {
+  return useMutation(updateExpense);
+};
+
+export const useDeleteExpense = (): UseMutationResult<
+  void,
+  Error,
+  string
+> => {
+  return useMutation(deleteExpense);
 };
 
 export const useDeleteFile = (): UseMutationResult<string, Error, string> => {

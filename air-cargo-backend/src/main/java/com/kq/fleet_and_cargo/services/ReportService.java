@@ -18,15 +18,21 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.math.BigDecimal;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -181,11 +187,40 @@ public record ReportService(CargoRepository cargoRepository,
         DateRange range = resolveRange(startDate, endDate);
         String normalizedSearch = normalizeSearch(search);
 
-        return expenseRepository.summarizeByCurrency(normalizedSearch, range.start(), range.end()).stream()
-                .map(row -> new ExpenseCurrencySummaryResponse(
-                        (String) row[0],
-                        toBigDecimal(row[1]),
-                        ((Number) row[2]).longValue()
+        List<Expense> expenses = expenseRepository.findAllWithinRange(
+                normalizedSearch,
+                range.start(),
+                range.end()
+        );
+
+        Map<String, CurrencySummary> totals = new HashMap<>();
+
+        for (Expense expense : expenses) {
+            if (expense.getAmount() == null || expense.getAmount().getAmount() == null) {
+                continue;
+            }
+            String currency = normalizeCurrency(expense.getAmount().getCurrencyCode());
+            if (currency == null) {
+                continue;
+            }
+
+            totals.compute(currency, (code, summary) -> {
+                BigDecimal amount = expense.getAmount().getAmount();
+                if (summary == null) {
+                    return new CurrencySummary(amount, 1L);
+                }
+                return summary.add(amount);
+            });
+        }
+
+        return totals.entrySet().stream()
+                .sorted(Map.Entry.<String, CurrencySummary>comparingByValue(
+                        Comparator.comparing(CurrencySummary::totalAmount).reversed()
+                ))
+                .map(entry -> new ExpenseCurrencySummaryResponse(
+                        entry.getKey(),
+                        entry.getValue().totalAmount(),
+                        entry.getValue().expenseCount()
                 ))
                 .collect(Collectors.toList());
     }
@@ -213,13 +248,41 @@ public record ReportService(CargoRepository cargoRepository,
         DateRange range = resolveRange(startDate, endDate);
         String normalizedSearch = normalizeSearch(search);
 
-        return expenseRepository.summarizeByMonth(normalizedSearch, range.start(), range.end()).stream()
-                .map(row -> new ExpenseMonthlyTrendResponse(
-                        formatPeriod(row[0]),
-                        (String) row[1],
-                        toBigDecimal(row[2])
-                ))
-                .collect(Collectors.toList());
+        List<Expense> expenses = expenseRepository.findAllWithinRange(
+                normalizedSearch,
+                range.start(),
+                range.end()
+        );
+
+        Map<YearMonth, Map<String, BigDecimal>> totalsByMonth = new LinkedHashMap<>();
+
+        expenses.stream()
+                .filter(expense -> expense.getAmount() != null && expense.getAmount().getAmount() != null)
+                .forEach(expense -> {
+                    ZonedDateTime incurred = resolveExpenseDate(expense);
+                    if (incurred == null) {
+                        return;
+                    }
+                    YearMonth period = YearMonth.from(incurred.withZoneSameInstant(DEFAULT_ZONE));
+                    String currency = normalizeCurrency(expense.getAmount().getCurrencyCode());
+                    if (currency == null) {
+                        return;
+                    }
+
+                    totalsByMonth
+                            .computeIfAbsent(period, key -> new HashMap<>())
+                            .merge(currency, expense.getAmount().getAmount(), BigDecimal::add);
+                });
+
+        return totalsByMonth.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .flatMap(entry -> entry.getValue().entrySet().stream()
+                        .map(currencyEntry -> new ExpenseMonthlyTrendResponse(
+                                formatPeriod(entry.getKey()),
+                                currencyEntry.getKey(),
+                                currencyEntry.getValue()
+                        )))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public synchronized byte[] generateExpenseMonthlyTrendReport(String search, String startDate, String endDate) throws IOException {
@@ -248,19 +311,27 @@ public record ReportService(CargoRepository cargoRepository,
         return search.trim();
     }
 
-    private BigDecimal toBigDecimal(Object value) {
-        if (value instanceof BigDecimal bigDecimal) {
-            return bigDecimal;
+    private String normalizeCurrency(String currencyCode) {
+        if (!hasText(currencyCode)) {
+            return null;
         }
-        if (value instanceof Number number) {
-            return BigDecimal.valueOf(number.doubleValue());
-        }
-        return BigDecimal.ZERO;
+        return currencyCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String formatPeriod(Object value) {
         if (value == null) {
             return "";
+        }
+        if (value instanceof YearMonth yearMonth) {
+            return String.format(
+                    "%s %d",
+                    yearMonth.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
+                    yearMonth.getYear()
+            );
         }
         if (value instanceof ZonedDateTime zonedDateTime) {
             return String.format(
@@ -277,6 +348,22 @@ public record ReportService(CargoRepository cargoRepository,
             );
         }
         return value.toString();
+    }
+
+    private ZonedDateTime resolveExpenseDate(Expense expense) {
+        if (expense.getIncurredAt() != null) {
+            return expense.getIncurredAt();
+        }
+        if (expense.getCreatedAt() != null) {
+            return expense.getCreatedAt();
+        }
+        return expense.getUpdatedAt();
+    }
+
+    private record CurrencySummary(BigDecimal totalAmount, long expenseCount) {
+        private CurrencySummary add(BigDecimal increment) {
+            return new CurrencySummary(totalAmount.add(increment), expenseCount + 1);
+        }
     }
 
     private void createHeaderRow(Sheet sheet, String[] columns) {
